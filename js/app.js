@@ -1,5 +1,5 @@
 /* =========================================
-   1. BASE DE DATOS (CONFIGURACIÓN)
+   1. CONFIGURACIÓN DE BASE DE DATOS
    ========================================= */
 const opcionesTiposervicio = {
     'HFC': ['Internet', 'Telefonía', 'TV_Digital', 'One_TV_2.0'],
@@ -17,7 +17,7 @@ const opcionesNaturaleza = {
 };
 
 /* =========================================
-   2. VARIABLES Y ESTADO
+   2. VARIABLES DE ESTADO Y ELEMENTOS
    ========================================= */
 let horaInicioLlamada = null; 
 
@@ -25,7 +25,7 @@ let horaInicioLlamada = null;
 let timerRetoma = null;
 let retomaStartTime = null;
 let primeraAlarmaSonada = false;
-let proximaAlarmaSegundos = 5;
+let proximaAlarmaSegundos = 45;
 
 // Métricas y Persistencia
 let ahtDiario = JSON.parse(localStorage.getItem('aht_diario')) || { segundos: 0, llamadas: 0, fecha: new Date().toLocaleDateString() };
@@ -33,7 +33,7 @@ let ahtMensual = JSON.parse(localStorage.getItem('aht_mensual')) || { segundos: 
 let historialLlamadas = JSON.parse(localStorage.getItem('historial_llamadas')) || [];
 let mesGuardado = localStorage.getItem('mes_actual') || new Date().toISOString().slice(0, 7);
 
-// DOM Elements (Selectores principales)
+// Elementos del DOM
 const callIdInput = document.getElementById('call_id');
 const techInput = document.getElementById('tech_input');
 const prodInput = document.getElementById('prod_input');
@@ -48,7 +48,7 @@ const radiosB2B = document.querySelectorAll('input[name="b2b_option"]');
 const panelB2B = document.getElementById('b2b_panel');
 
 /* =========================================
-   3. FUNCIONES DE UTILIDAD Y SONIDO
+   3. FUNCIONES DE UTILIDAD (SONIDO Y UI)
    ========================================= */
 
 // Llenar listas desplegables
@@ -63,7 +63,7 @@ function llenarDatalist(datalistElement, arrayOpciones) {
     });
 }
 
-// Formato de tiempo visual
+// Formato de tiempo "120s / 02:00m"
 function formatearDual(segundos) {
     const totalSeg = Math.round(segundos);
     const m = Math.floor(totalSeg / 60).toString().padStart(2, '0');
@@ -71,7 +71,7 @@ function formatearDual(segundos) {
     return `${totalSeg}s / ${m}.${s}m`;
 }
 
-// --- SONIDO MEJORADO (SUAVE/ZEN) ---
+// --- SONIDO SUAVE (ZEN) ---
 function sonarAlertaRetoma() {
     const AudioContext = window.AudioContext || window.webkitAudioContext;
     if (!AudioContext) return;
@@ -81,9 +81,9 @@ function sonarAlertaRetoma() {
     const gainNode = audioCtx.createGain();
 
     oscillator.type = 'sine'; 
-    oscillator.frequency.setValueAtTime(523.25, audioCtx.currentTime); // Nota Do (C5) - Agradable
+    oscillator.frequency.setValueAtTime(523.25, audioCtx.currentTime); // Nota Do (C5)
 
-    // Efecto Fade-In y Fade-Out para que no golpee el oído
+    // Efecto Fade-In y Fade-Out para no asustar
     gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
     gainNode.gain.linearRampToValueAtTime(0.2, audioCtx.currentTime + 0.1); 
     gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 1.5);
@@ -97,39 +97,38 @@ function sonarAlertaRetoma() {
 }
 
 /* =========================================
-   4. LÓGICA DEL TEMPORIZADOR (MOTOR DE TIEMPO)
+   4. LÓGICA DEL TEMPORIZADOR (MOTOR)
    ========================================= */
 function gestionarTimerRetoma(esReinicioManual = false) {
-    // 1. Limpiar cualquier conteo previo
+    // 1. Limpiar timer anterior
     if (timerRetoma) clearInterval(timerRetoma);
 
     retomaStartTime = Date.now();
     
     if (esReinicioManual) {
-        // Si presionamos "Modificar", saltamos directo al ciclo de 115s
+        // Reinicio manual (Botón Modificar): Vamos directo al ciclo de 115s
         primeraAlarmaSonada = true; 
         proximaAlarmaSegundos = 115;
-        console.log("🔄 Reinicio manual (Modificar): Alarma programada en 1:55 min");
+        console.log("🔄 Reinicio manual: Alarma en 1:55 min");
     } else {
-        // Inicio automático por llamada: Primero 45s
+        // Inicio automático (Al escribir ID): Primero 45s
         primeraAlarmaSonada = false;
         proximaAlarmaSegundos = 45;
-        console.log("⏱️ Inicio automático: Primera alarma en 45s");
+        console.log("⏱️ Inicio automático: Alarma en 45s");
     }
 
-    // 2. Iniciar el intervalo
     timerRetoma = setInterval(() => {
         const segundosTranscurridos = Math.floor((Date.now() - retomaStartTime) / 1000);
 
         if (segundosTranscurridos >= proximaAlarmaSegundos) {
-            sonarAlertaRetoma(); // ¡Sonido Suave!
+            sonarAlertaRetoma(); // ¡Sonido!
 
             if (!primeraAlarmaSonada) {
-                // Transición: De los 45s pasamos a los 115s
+                // De 45s pasamos a 115s
                 primeraAlarmaSonada = true;
                 proximaAlarmaSegundos = segundosTranscurridos + 115;
             } else {
-                // Ciclo Infinito: Sumamos 115s cada vez
+                // Sumamos 115s cíclicamente
                 proximaAlarmaSegundos += 115;
             }
         }
@@ -137,51 +136,83 @@ function gestionarTimerRetoma(esReinicioManual = false) {
 }
 
 /* =========================================
-   5. INPUTS INTELIGENTES (AUTOCOMPLETE CON TAB)
+   5. INPUTS AVANZADOS (GHOST VALUE + AUTOCOMPLETE + NAV)
    ========================================= */
-function configurarInputInteligente(inputElement, dataListId) {
+function configurarInputAvanzado(inputElement, dataListId) {
     if (!inputElement) return;
 
-    // A. Comportamiento visual (Ver lista al hacer clic)
+    // Buscamos la etiqueta (label) hermana para el efecto visual
+    const label = inputElement.nextElementSibling;
+
+    // A. ENTRADA (FOCUS): Mover valor actual al label ("Ghost Value")
     inputElement.addEventListener('focus', function() {
-        this.dataset.oldValue = this.value; 
-        this.value = ''; // Limpia para mostrar opciones
+        this.dataset.oldValue = this.value; // Guardar valor real
+        
+        // Si hay un valor, lo subimos a la etiqueta para que no se pierda de vista
+        if (this.value && label) {
+            if (!label.dataset.originalText) {
+                label.dataset.originalText = label.innerText; 
+            }
+            label.innerText = this.value; 
+            label.style.color = "#ef4444"; 
+        }
+
+        this.value = ''; // Limpiamos el input para permitir búsqueda fresca
     });
 
+    // B. SALIDA (BLUR): Restaurar si no se eligió nada
     inputElement.addEventListener('blur', function() {
         if (this.value === '') {
-            this.value = this.dataset.oldValue || ''; // Restaura si no eligió nada
+            this.value = this.dataset.oldValue || ''; // Restaurar valor anterior
+        }
+
+        // Devolver el label a su estado original
+        if (label && label.dataset.originalText) {
+            label.innerText = label.dataset.originalText;
+            label.style.color = ""; 
         }
     });
 
-    // B. Autocompletado con TECLA TABulador
+    // C. AUTOCOMPLETADO CON TABULADOR (CORREGIDO: SALTA AL SIGUIENTE)
     inputElement.addEventListener('keydown', function(e) {
         if (e.key === 'Tab') {
             const val = this.value.toLowerCase();
             const dataList = document.getElementById(dataListId);
             
             if (val && dataList) {
-                // Buscar coincidencia en la lista
                 const opciones = Array.from(dataList.options);
+                // Buscar coincidencia que empiece por lo escrito
                 const coincidencia = opciones.find(opt => opt.value.toLowerCase().startsWith(val));
 
                 if (coincidencia) {
-                    // Rellenar el input con el valor correcto
+                    // 1. Evitar comportamiento por defecto
+                    e.preventDefault(); 
+                    
+                    // 2. Rellenar valor
                     this.value = coincidencia.value;
-                    // Disparar evento 'change' para que se activen las cascadas (Tecnología -> Producto)
+                    
+                    // 3. Disparar eventos de cambio
                     this.dispatchEvent(new Event('change'));
+                    
+                    // 4. SOLUCIÓN: BUSCAR Y ENFOCAR EL SIGUIENTE CAMPO
+                    const formElements = Array.from(document.querySelectorAll('input:not([type="hidden"]), textarea, button'));
+                    const currentIndex = formElements.indexOf(this);
+                    
+                    if (currentIndex > -1 && currentIndex < formElements.length - 1) {
+                        formElements[currentIndex + 1].focus();
+                    }
                 }
             }
         }
     });
 }
 
-// Aplicar la inteligencia a los inputs
-configurarInputInteligente(techInput, 'tech_options');
-configurarInputInteligente(prodInput, 'prod_options');
-configurarInputInteligente(failInput, 'fail_options');
+// Configuración de los 3 campos principales
+configurarInputAvanzado(techInput, 'tech_options');
+configurarInputAvanzado(prodInput, 'prod_options');
+configurarInputAvanzado(failInput, 'fail_options');
 
-// Función auxiliar para actualizar la lista de Fallas
+// Función auxiliar para actualizar Fallas (Cascada)
 function actualizarFallas(producto) {
     if (!opcionesNaturaleza[producto]) {
         if(failList) failList.innerHTML = '';
@@ -189,12 +220,12 @@ function actualizarFallas(producto) {
         return;
     }
     llenarDatalist(failList, opcionesNaturaleza[producto]);
-    // Seleccionar el primero por defecto para agilizar
+    // Pre-seleccionar el primero
     if(failInput) failInput.value = opcionesNaturaleza[producto][0];
 }
 
 /* =========================================
-   6. GESTIÓN DE MÉTRICAS Y MES
+   6. MÉTRICAS Y CONTROL DE MES
    ========================================= */
 function actualizarMetricasUI() {
     const hoy = new Date().toLocaleDateString();
@@ -217,7 +248,7 @@ function actualizarMetricasUI() {
 function verificarCambioMes() {
     const mesActualReal = new Date().toISOString().slice(0, 7);
     if (mesGuardado !== mesActualReal) {
-        alert(`📅 Nuevo Mes Detectado. Se reiniciarán las métricas.`);
+        alert(`📅 Nuevo Mes Detectado. Reiniciando métricas.`);
         ahtMensual = { segundos: 0, llamadas: 0 };
         historialLlamadas = [];
         mesGuardado = mesActualReal;
@@ -230,7 +261,7 @@ function verificarCambioMes() {
 }
 
 /* =========================================
-   7. EVENTOS PRINCIPALES (PROTEGIDOS)
+   7. EVENTOS Y LÓGICA DE NEGOCIO
    ========================================= */
 
 // --- CASCADA TECNOLOGÍA -> PRODUCTO ---
@@ -254,31 +285,30 @@ if (prodInput) {
     prodInput.addEventListener('change', (e) => actualizarFallas(e.target.value));
 }
 
-// --- INICIO AUTOMÁTICO DEL TIMER (ID LLAMADA) ---
+// --- INICIO AUTOMÁTICO TIMER (ID LLAMADA) ---
 if (callIdInput) {
     callIdInput.addEventListener('input', () => {
         if (callIdInput.value.length > 0 && horaInicioLlamada === null) {
             horaInicioLlamada = Date.now();
-            // Inicia timer automático (45s -> 115s)
+            // Inicia: 45s -> luego 115s
             gestionarTimerRetoma(false); 
         }
     });
 }
 
-// --- BOTÓN "MODIFICAR" (REINICIO MANUAL DEL TIMER) ---
+// --- BOTÓN "MODIFICAR" (REINICIO MANUAL) ---
 const btnModificar = document.getElementById('btn_key_mod');
 if (btnModificar) {
     btnModificar.addEventListener('click', () => {
-        // Solo funciona si ya hay una llamada en curso
         if (horaInicioLlamada !== null) {
-            gestionarTimerRetoma(true); // Reinicia a ciclo de 115s directo
+            gestionarTimerRetoma(true); // Reinicia ciclo a 115s
             
-            // Feedback Visual en el botón
-            const textoOriginal = btnModificar.textContent;
+            // Efecto visual en el botón
+            const original = btnModificar.textContent;
             btnModificar.textContent = "⏱️ Reiniciado";
-            btnModificar.style.backgroundColor = "#dcfce7"; // Verde suave
+            btnModificar.style.backgroundColor = "#dcfce7"; 
             setTimeout(() => {
-                btnModificar.textContent = textoOriginal;
+                btnModificar.textContent = original;
                 btnModificar.style.backgroundColor = ""; 
             }, 1000);
         }
@@ -338,15 +368,14 @@ if (btnReset) {
             return;
         }
 
-        // 1. Detener Timer y Sonidos
+        // 1. Detener Timer
         if (timerRetoma) clearInterval(timerRetoma);
         timerRetoma = null;
 
-        // 2. Calcular Duración
+        // 2. Guardar y Métricas
         const fin = Date.now();
         const duracion = (fin - (horaInicioLlamada || fin)) / 1000;
         
-        // 3. Guardar en Historial
         const registro = {
             fecha: new Date().toLocaleDateString(),
             hora: new Date().toLocaleTimeString(),
@@ -362,15 +391,14 @@ if (btnReset) {
         historialLlamadas.push(registro);
         localStorage.setItem('historial_llamadas', JSON.stringify(historialLlamadas));
         
-        // 4. Actualizar Métricas
         ahtDiario.segundos += duracion; ahtDiario.llamadas++;
         ahtMensual.segundos += duracion; ahtMensual.llamadas++;
         localStorage.setItem('aht_diario', JSON.stringify(ahtDiario));
         localStorage.setItem('aht_mensual', JSON.stringify(ahtMensual));
 
-        // 5. Limpieza de Interfaz
+        // 3. Reset UI
         actualizarMetricasUI();
-        horaInicioLlamada = null; // Reset variable inicio
+        horaInicioLlamada = null;
         
         document.querySelectorAll('input:not([type="radio"])').forEach(i => i.value = '');
         document.querySelectorAll('textarea').forEach(t => {
@@ -381,10 +409,12 @@ if (btnReset) {
         if(prodList) prodList.innerHTML = '';
         if(failList) failList.innerHTML = '';
         
-        // Reset B2B
         if(panelB2B) panelB2B.classList.add('hidden');
         const radioNo = document.querySelector('input[name="b2b_option"][value="no"]');
         if(radioNo) radioNo.checked = true;
+
+        // 4. FOCO AL ID (PARA LA SIGUIENTE LLAMADA - SOLUCIÓN)
+        if (callIdInput) callIdInput.focus();
     });
 }
 
@@ -397,44 +427,99 @@ if (radiosB2B && radiosB2B.length > 0) {
     });
 }
 
-// --- BOTÓN EXPORTAR CSV ---
+/* =========================================
+   8. EXPORTACIÓN, IMPORTACIÓN Y LIMPIEZA
+   ========================================= */
+
+// --- BOTÓN EXPORTAR (Excel y JSON) ---
 const btnExport = document.getElementById('btn_export');
 if (btnExport) {
     btnExport.addEventListener('click', () => {
         if (historialLlamadas.length === 0) {
-            alert("⚠️ No hay datos."); return;
+            alert("⚠️ No hay datos para exportar.");
+            return;
         }
-        // ... (Lógica de exportación simplificada)
-        let csv = "data:text/csv;charset=utf-8,Fecha,Hora,ID,Cliente,Tec,Prod,Falla,Obs\n";
+
+        const fechaHoy = new Date().toLocaleDateString().replace(/\//g, '-');
+
+        // A. GENERAR CSV
+        let csv = "data:text/csv;charset=utf-8,Fecha,Hora,ID,Cliente,Tec,Prod,Falla,Duracion,Obs\n";
         historialLlamadas.forEach(r => {
             const obsClean = (r.obs || '').replace(/,/g, ';').replace(/\n/g, ' ');
             csv += `${r.fecha},${r.hora},${r.id},"${r.cliente}",${r.tec},${r.prod},"${r.falla}","${obsClean}"\n`;
         });
-        const link = document.createElement("a");
-        link.href = encodeURI(csv);
-        link.download = `Reporte_${new Date().toLocaleDateString().replace(/\//g,'-')}.csv`;
-        link.click();
+        
+        const linkExcel = document.createElement("a");
+        linkExcel.href = encodeURI(csv);
+        linkExcel.download = `Reporte_${fechaHoy}.csv`;
+        linkExcel.click();
+
+        // B. GENERAR JSON (BACKUP)
+        const backupData = {
+            historial: historialLlamadas,
+            diario: ahtDiario,
+            mensual: ahtMensual
+        };
+        const blobJson = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
+        const linkJson = document.createElement("a");
+        linkJson.href = URL.createObjectURL(blobJson);
+        linkJson.download = `Backup_Data_${fechaHoy}.json`;
+        
+        setTimeout(() => linkJson.click(), 500);
     });
 }
 
-/* =========================================
-   8. IMPORTACIÓN (OPCIONAL)
-   ========================================= */
+// --- IMPORTAR DATOS (FUSIÓN INTELIGENTE) ---
 const btnImport = document.getElementById('btn_import_data');
 const fileSelector = document.getElementById('file_selector');
+
 if (btnImport && fileSelector) {
     btnImport.addEventListener('click', () => fileSelector.click());
-    fileSelector.addEventListener('change', (e) => {
-        // Lógica de importación estándar
-        // ...
+
+    fileSelector.addEventListener('change', function(e) {
+        const archivo = e.target.files[0];
+        if (!archivo) return;
+
+        const lector = new FileReader();
+        lector.onload = function(e) {
+            try {
+                const datosImportados = JSON.parse(e.target.result);
+                
+                if (confirm("¿Fusionar datos? (Se agregarán sin borrar lo actual)")) {
+                    // 1. Fusionar Historial
+                    const nuevos = datosImportados.historial || [];
+                    nuevos.forEach(nuevo => {
+                        const existe = historialLlamadas.some(reg => reg.id === nuevo.id && reg.fecha === nuevo.fecha);
+                        if (!existe) historialLlamadas.push(nuevo);
+                    });
+
+                    // 2. Fusionar Métricas
+                    ahtDiario.segundos += (datosImportados.diario?.segundos || 0);
+                    ahtDiario.llamadas += (datosImportados.diario?.llamadas || 0);
+                    ahtMensual.segundos += (datosImportados.mensual?.segundos || 0);
+                    ahtMensual.llamadas += (datosImportados.mensual?.llamadas || 0);
+
+                    // 3. Guardar
+                    localStorage.setItem('historial_llamadas', JSON.stringify(historialLlamadas));
+                    localStorage.setItem('aht_diario', JSON.stringify(ahtDiario));
+                    localStorage.setItem('aht_mensual', JSON.stringify(ahtMensual));
+                    
+                    alert("✅ Datos importados correctamente.");
+                    location.reload();
+                }
+            } catch (err) {
+                alert("❌ Archivo inválido.");
+            }
+        };
+        lector.readAsText(archivo);
     });
 }
 
-// BOTÓN BORRAR DATOS
+// --- BORRAR TODO ---
 const btnClear = document.getElementById('btn_clear_data');
 if (btnClear) {
     btnClear.addEventListener('click', () => {
-        if(confirm("¿Borrar todo?")) {
+        if(confirm("⚠️ ¿Estás seguro? Se borrará TODO.")) {
             localStorage.clear();
             location.reload();
         }
@@ -450,7 +535,7 @@ Object.keys(claves).forEach(id => {
     if(btn) btn.addEventListener('click', () => navigator.clipboard.writeText(claves[id]));
 });
 
-// INICIO
+// INICIO AUTOMÁTICO
 function init() {
     llenarDatalist(techList, Object.keys(opcionesTiposervicio));
     verificarCambioMes();

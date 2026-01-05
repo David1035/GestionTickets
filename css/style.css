@@ -9,9 +9,9 @@
   --card-bg: #ffffff;
   --text-main: #1f2937;
   --text-muted: #6b7280;
-  --border-color: #e5e7eb;
-  --input-fill-bg: #f0f7ff; /* Un azul muy tenue para cuando escribes */
-  --input-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+  --border-color: #cbd5e1;
+  --input-fill-bg: #f8fafc;
+  --input-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
 }
 
 body {
@@ -20,24 +20,25 @@ body {
   color: var(--text-main);
   display: flex;
   justify-content: center;
+  align-items: center; /* Centrado vertical */
   min-height: 100vh;
   margin: 0;
-  padding: 0;
+  padding: 10px; /* Un poco de margen en móviles */
 }
 
 /* =========================================
-   2. CONTENEDOR PRINCIPAL
+   2. CONTENEDOR PRINCIPAL (COMPACTO)
    ========================================= */
 .card-container {
   background-color: var(--card-bg);
-  padding: 1rem;
+  padding: 1.2rem; /* Compacto */
   border-radius: 12px;
   box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
   width: 100%;
-  max-width: 500px;
+  max-width: 500px; /* Ancho controlado */
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 5px;
 }
 
 /* =========================================
@@ -46,9 +47,9 @@ body {
 .top-toolbar {
     display: flex;
     gap: 8px;
-    padding-bottom: 15px;
+    padding-bottom: 10px;
     border-bottom: 1px solid #e5e7eb;
-    margin-bottom: 5px;
+    margin-bottom: 10px;
     justify-content: space-between;
     flex-wrap: wrap;
 }
@@ -57,7 +58,7 @@ body {
     background-color: transparent;
     border: 1px solid transparent;
     color: #64748b;
-    padding: 4px 6px;
+    padding: 6px 10px;
     font-size: 0.8rem;
     border-radius: 6px;
     cursor: pointer;
@@ -78,13 +79,17 @@ body {
     transform: translateY(-1px);
 }
 
+.tool-btn:active {
+    transform: scale(0.95);
+}
+
 /* =========================================
    4. SISTEMA DE FILAS (GRID)
    ========================================= */
 .row {
   display: flex;
-  gap: 15px;
-  margin-bottom: 13px;
+  gap: 10px; /* Separación horizontal */
+  margin-bottom: 12px; /* Separación vertical */
 }
 .row .floating-group {
   flex: 1;
@@ -94,86 +99,89 @@ body {
 }
 
 /* =========================================
-   5. INPUTS FLOTANTES MODERNOS
+   5. INPUTS FLOTANTES (EFECTO GHOST / AIRE)
    ========================================= */
 .floating-group {
   position: relative;
-  margin-bottom: 12px;
+  margin-bottom: 5px;
   width: 100%;
 }
 
 .floating-group input, 
 .floating-group textarea {
   width: 100%;
-  padding: 15px 10px 4px 10px; /* Un poco más de aire */
-  border: 1.5px solid var(--border-color); /* Borde un poco más definido */
-  border-radius: 6px;
+  padding: 12px 10px; /* Padding equilibrado */
+  border: 1.5px solid var(--border-color);
+  border-radius: 8px;
   background-color: #ffffff;
-  font-size: 0.85rem;
+  font-size: 0.9rem;
   font-family: inherit;
   color: var(--text-main);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); /* Transición más fluida */
+  transition: all 0.2s ease;
   box-sizing: border-box;
   box-shadow: var(--input-shadow);
 }
 
 .floating-group textarea {
-  min-height: 50px;
+  min-height: 60px; /* Altura compacta para observaciones */
   resize: none; 
   overflow: hidden;
 }
 
-/* EFECTO AL ESCRIBIR (Input relleno) */
+/* EFECTO: Input relleno o con foco */
 .floating-group input:not(:placeholder-shown),
 .floating-group textarea:not(:placeholder-shown) {
-  background-color: var(--input-fill-bg);
-  border-color: #cbd5e1;
+  background-color: #fff; /* Mantener blanco para limpieza */
+  border-color: #94a3b8;
 }
 
-/* EFECTO AL HACER FOCO */
 .floating-group input:focus, 
 .floating-group textarea:focus {
   outline: none;
   border-color: var(--primary-color);
   background-color: #fff;
-  box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.15), 0 4px 6px -2px rgba(37, 99, 235, 0.05);
-  transform: translateY(-1px); /* Pequeña elevación */
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
 }
 
+/* ETIQUETA (LABEL) - ESTADO NORMAL */
 .floating-group label {
   position: absolute;
-  top: 9.5px;
+  top: 50%; /* Centrado perfecto verticalmente */
+  transform: translateY(-50%);
   left: 10px;
   color: var(--text-muted);
-  pointer-events: none;
-  transition: all 0.25s ease;
-  font-size: 0.85rem;
-  opacity: 0.8;
+  pointer-events: none; /* Importante para poder hacer clic a través */
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  font-size: 0.9rem;
+  padding: 0 4px;
+  background-color: transparent;
+  border-radius: 4px;
 }
 
-/* MOVIMIENTO DEL LABEL */
+/* ETIQUETA - ESTADO "EN EL AIRE" (GHOST) */
 .floating-group input:focus ~ label,
 .floating-group input:not(:placeholder-shown) ~ label,
 .floating-group textarea:focus ~ label,
 .floating-group textarea:not(:placeholder-shown) ~ label {
-  top: 2px;
-  left: 12px;
-  font-size: 0.7rem;
+  top: 0; /* Se posienta justo en el borde superior */
+  transform: translateY(-50%); /* Lo sube para que quede mitad dentro mitad fuera */
+  left: 10px;
+  font-size: 0.75rem;
   color: var(--primary-color);
   font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.9px;
-  opacity: 1;
+  background-color: #ffffff; /* FONDO BLANCO PARA "CORTAR" LA LÍNEA */
+  z-index: 10; /* Asegura que quede encima del borde */
 }
 
-/* PEQUEÑO DESTELLO AL ENTRAR (Opcional) */
-@keyframes inputPulse {
-  0% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.2); }
-  100% { box-shadow: 0 0 0 8px rgba(37, 99, 235, 0); }
+/* Ajuste específico para textarea (el label inicia arriba, no en el centro) */
+.floating-group textarea ~ label {
+  top: 15px;
+  transform: none;
 }
-
-.floating-group input:focus {
-  animation: inputPulse 0.5s forwards;
+.floating-group textarea:focus ~ label,
+.floating-group textarea:not(:placeholder-shown) ~ label {
+  top: 0;
+  transform: translateY(-50%);
 }
 
 /* =========================================
@@ -181,22 +189,22 @@ body {
    ========================================= */
 .actions {
   display: flex;
-  gap: 15px;
-  margin-top: 8px;
-  margin-bottom: 12px;
+  gap: 10px;
+  margin-top: 5px;
+  margin-bottom: 10px;
 }
 
 button {
   flex: 1;
-  padding: 12px;
+  padding: 10px;
   border: none;
   border-radius: 8px;
   font-weight: 600;
   cursor: pointer;
-  font-size: 1rem;
-  transition: transform 0.1s, filter 0.2s;
+  font-size: 0.95rem;
+  transition: transform 0.1s;
 }
-button:active { transform: scale(0.98); }
+button:active { transform: scale(0.97); }
 
 #btn_copy {
   background-color: var(--primary-color);
@@ -207,23 +215,13 @@ button:active { transform: scale(0.98); }
   color: white;
 }
 
-.tool-btn:active {
-    transform: scale(0.95);
-}
-
-.tool-btn:hover {
-    background-color: #fff;
-    color: var(--primary-color);
-    border-color: var(--primary-color);
-    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.1);
-}
 /* =========================================
    7. SECCIÓN B2B
    ========================================= */
 .b2b-section {
   border-top: 1px dashed #cbd5e1;
   padding-top: 10px;
-  margin-top: 8px;
+  margin-top: 5px;
 }
 
 .b2b-header {
@@ -235,7 +233,7 @@ button:active { transform: scale(0.98); }
 
 .section-title {
   margin: 0;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   font-weight: bold;
   color: #1e3a8a;
 }
@@ -246,7 +244,7 @@ button:active { transform: scale(0.98); }
 }
 
 .radio-group label {
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -257,9 +255,9 @@ button:active { transform: scale(0.98); }
 
 #b2b_panel {
   background-color: #eff6ff;
-  padding: 15px;
+  padding: 10px;
   border-radius: 8px;
-  margin-top: 10px;
+  margin-top: 5px;
   animation: slideDown 0.3s ease-out;
 }
 
@@ -268,7 +266,7 @@ button:active { transform: scale(0.98); }
   align-items: center;
   gap: 8px;
   margin-top: 5px;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
 }
 
 @keyframes slideDown {
@@ -281,17 +279,17 @@ button:active { transform: scale(0.98); }
    ========================================= */
 .stats-container {
   display: flex;
-  gap: 15px;
+  gap: 10px;
   margin-top: 10px;
-  padding-top: 12px;
+  padding-top: 10px;
   border-top: 2px solid #f3f4f6;
 }
 
 .stat-card {
   background-color: #f8fafc;
   border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  padding: 10px;
+  border-radius: 10px;
+  padding: 8px;
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -300,23 +298,22 @@ button:active { transform: scale(0.98); }
 }
 
 .stat-label {
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   color: var(--text-muted);
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
 }
 
 .stat-value {
-  font-size: 1.2rem;
+  font-size: 1.1rem;
   font-weight: 800;
   color: #334155;
-  margin: 5px 0;
+  margin: 3px 0;
   font-variant-numeric: tabular-nums;
 }
 
 .stat-sub {
-    font-size: 0.65rem;
+    font-size: 0.6rem;
     color: #94a3b8;
 }
 
@@ -324,16 +321,16 @@ button:active { transform: scale(0.98); }
    9. BARRA DE CLAVES
    ========================================= */
 .key-bar {
-  margin-top: 16px;
-  padding-top: 15px;
+  margin-top: 10px;
+  padding-top: 10px;
   border-top: 1px solid #e5e7eb;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 }
 
 .key-label {
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   color: var(--text-muted);
   font-weight: 700;
   text-transform: uppercase;
@@ -341,12 +338,12 @@ button:active { transform: scale(0.98); }
 
 .key-buttons {
   display: flex;
-  gap: 8px;
+  gap: 5px;
 }
 
 .btn-key {
-  padding: 8px 10px;
-  font-size: 0.8rem;
+  padding: 6px 8px;
+  font-size: 0.75rem;
   border-radius: 6px;
   border: 1px solid #cbd5e1;
   background-color: #fff;
@@ -364,12 +361,10 @@ button:active { transform: scale(0.98); }
 }
 
 .btn-key.mod {
-  background-color: #fffbfc; 
-  color: #64748b;
-  border-style: dashed;
+  background-color: #f0fdf4; /* Verde muy suave */
+  color: #166534;
+  border: 1px dashed #22c55e;
 }
 .btn-key.mod:hover {
-  background-color: #fff1f2;
-  color: #e11d48;
-  border-color: #fda4af;
+  background-color: #dcfce7;
 }
