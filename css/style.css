@@ -10,6 +10,8 @@
   --text-main: #1f2937;
   --text-muted: #6b7280;
   --border-color: #e5e7eb;
+  --input-fill-bg: #f0f7ff; /* Un azul muy tenue para cuando escribes */
+  --input-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
 }
 
 body {
@@ -18,10 +20,9 @@ body {
   color: var(--text-main);
   display: flex;
   justify-content: center;
-  align-items: center;
   min-height: 100vh;
   margin: 0;
-  padding: 20px;
+  padding: 0;
 }
 
 /* =========================================
@@ -29,14 +30,14 @@ body {
    ========================================= */
 .card-container {
   background-color: var(--card-bg);
-  padding: 2rem;
-  border-radius: 16px;
+  padding: 1rem;
+  border-radius: 12px;
   box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
   width: 100%;
-  max-width: 600px;
+  max-width: 500px;
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 2px;
 }
 
 /* =========================================
@@ -47,7 +48,7 @@ body {
     gap: 8px;
     padding-bottom: 15px;
     border-bottom: 1px solid #e5e7eb;
-    margin-bottom: 10px;
+    margin-bottom: 5px;
     justify-content: space-between;
     flex-wrap: wrap;
 }
@@ -56,7 +57,7 @@ body {
     background-color: transparent;
     border: 1px solid transparent;
     color: #64748b;
-    padding: 6px 10px;
+    padding: 4px 6px;
     font-size: 0.8rem;
     border-radius: 6px;
     cursor: pointer;
@@ -83,7 +84,7 @@ body {
 .row {
   display: flex;
   gap: 15px;
-  margin-bottom: 15px;
+  margin-bottom: 13px;
 }
 .row .floating-group {
   flex: 1;
@@ -93,61 +94,86 @@ body {
 }
 
 /* =========================================
-   5. INPUTS FLOTANTES
+   5. INPUTS FLOTANTES MODERNOS
    ========================================= */
 .floating-group {
   position: relative;
-  margin-bottom: 15px;
+  margin-bottom: 12px;
   width: 100%;
 }
 
 .floating-group input, 
 .floating-group textarea {
   width: 100%;
-  padding: 16px 12px 6px 12px;
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
-  background-color: #f9fafb;
-  font-size: 0.95rem;
+  padding: 15px 10px 4px 10px; /* Un poco más de aire */
+  border: 1.5px solid var(--border-color); /* Borde un poco más definido */
+  border-radius: 6px;
+  background-color: #ffffff;
+  font-size: 0.85rem;
   font-family: inherit;
   color: var(--text-main);
-  transition: all 0.2s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); /* Transición más fluida */
   box-sizing: border-box;
+  box-shadow: var(--input-shadow);
 }
 
 .floating-group textarea {
-  min-height: 80px;
+  min-height: 50px;
   resize: none; 
-  overflow: hidden; /* IMPORTANTE: Oculta scrollbar */
+  overflow: hidden;
 }
 
+/* EFECTO AL ESCRIBIR (Input relleno) */
+.floating-group input:not(:placeholder-shown),
+.floating-group textarea:not(:placeholder-shown) {
+  background-color: var(--input-fill-bg);
+  border-color: #cbd5e1;
+}
+
+/* EFECTO AL HACER FOCO */
 .floating-group input:focus, 
 .floating-group textarea:focus {
   outline: none;
   border-color: var(--primary-color);
   background-color: #fff;
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+  box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.15), 0 4px 6px -2px rgba(37, 99, 235, 0.05);
+  transform: translateY(-1px); /* Pequeña elevación */
 }
 
 .floating-group label {
   position: absolute;
-  top: 14px;
-  left: 12px;
+  top: 9.5px;
+  left: 10px;
   color: var(--text-muted);
   pointer-events: none;
-  transition: all 0.2s ease;
-  font-size: 0.95rem;
+  transition: all 0.25s ease;
+  font-size: 0.85rem;
+  opacity: 0.8;
 }
 
+/* MOVIMIENTO DEL LABEL */
 .floating-group input:focus ~ label,
 .floating-group input:not(:placeholder-shown) ~ label,
 .floating-group textarea:focus ~ label,
 .floating-group textarea:not(:placeholder-shown) ~ label {
   top: 2px;
-  left: 10px;
-  font-size: 0.75rem;
+  left: 12px;
+  font-size: 0.7rem;
   color: var(--primary-color);
-  font-weight: 600;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.9px;
+  opacity: 1;
+}
+
+/* PEQUEÑO DESTELLO AL ENTRAR (Opcional) */
+@keyframes inputPulse {
+  0% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.2); }
+  100% { box-shadow: 0 0 0 8px rgba(37, 99, 235, 0); }
+}
+
+.floating-group input:focus {
+  animation: inputPulse 0.5s forwards;
 }
 
 /* =========================================
@@ -156,13 +182,13 @@ body {
 .actions {
   display: flex;
   gap: 15px;
-  margin-top: 10px;
-  margin-bottom: 20px;
+  margin-top: 8px;
+  margin-bottom: 12px;
 }
 
 button {
   flex: 1;
-  padding: 14px;
+  padding: 12px;
   border: none;
   border-radius: 8px;
   font-weight: 600;
@@ -181,13 +207,23 @@ button:active { transform: scale(0.98); }
   color: white;
 }
 
+.tool-btn:active {
+    transform: scale(0.95);
+}
+
+.tool-btn:hover {
+    background-color: #fff;
+    color: var(--primary-color);
+    border-color: var(--primary-color);
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.1);
+}
 /* =========================================
    7. SECCIÓN B2B
    ========================================= */
 .b2b-section {
   border-top: 1px dashed #cbd5e1;
-  padding-top: 15px;
-  margin-top: 10px;
+  padding-top: 10px;
+  margin-top: 8px;
 }
 
 .b2b-header {
@@ -246,8 +282,8 @@ button:active { transform: scale(0.98); }
 .stats-container {
   display: flex;
   gap: 15px;
-  margin-top: 20px;
-  padding-top: 20px;
+  margin-top: 10px;
+  padding-top: 12px;
   border-top: 2px solid #f3f4f6;
 }
 
@@ -255,7 +291,7 @@ button:active { transform: scale(0.98); }
   background-color: #f8fafc;
   border: 1px solid #e2e8f0;
   border-radius: 12px;
-  padding: 15px;
+  padding: 10px;
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -288,7 +324,7 @@ button:active { transform: scale(0.98); }
    9. BARRA DE CLAVES
    ========================================= */
 .key-bar {
-  margin-top: 20px;
+  margin-top: 16px;
   padding-top: 15px;
   border-top: 1px solid #e5e7eb;
   display: flex;
