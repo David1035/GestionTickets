@@ -1,4 +1,13 @@
 /* =========================================
+   9. CLAVES RÁPIDAS
+   ========================================= */
+const claves = { 'btn_key_elite': 'D24lj8Klo3l&/$l', 'btn_key_fenix': 'CRWS8T3JPICEZ8', 'btn_key_pwd': 'A22Aguamari$$++' };
+Object.keys(claves).forEach(id => {
+    const btn = document.getElementById(id);
+    if(btn) btn.addEventListener('click', () => navigator.clipboard.writeText(claves[id]));
+});
+
+/* =========================================
    1. CONFIGURACIÓN DE BASE DE DATOS
    ========================================= */
 const opcionesTiposervicio = {
@@ -27,6 +36,7 @@ let retomaStartTime = null;
 let primeraAlarmaSonada = false;
 let proximaAlarmaSegundos = 45;
 
+
 // Métricas y Persistencia
 let ahtDiario = JSON.parse(localStorage.getItem('aht_diario')) || { segundos: 0, llamadas: 0, fecha: new Date().toLocaleDateString() };
 let ahtMensual = JSON.parse(localStorage.getItem('aht_mensual')) || { segundos: 0, llamadas: 0 };
@@ -47,6 +57,10 @@ const failList = document.getElementById('fail_options');
 const radiosB2B = document.querySelectorAll('input[name="b2b_option"]');
 const panelB2B = document.getElementById('b2b_panel');
 
+
+const displayTotal = document.getElementById('display_total');
+const displayCountdown = document.getElementById('display_countdown');
+const timerPanel = document.getElementById('timer_panel');
 /* =========================================
    3. FUNCIONES DE UTILIDAD (SONIDO Y UI)
    ========================================= */
@@ -307,6 +321,9 @@ if (btnModificar) {
             const original = btnModificar.textContent;
             btnModificar.textContent = "⏱️ Reiniciado";
             btnModificar.style.backgroundColor = "#dcfce7"; 
+
+            if(obsTextarea) obsTextarea.focus()
+
             setTimeout(() => {
                 btnModificar.textContent = original;
                 btnModificar.style.backgroundColor = ""; 
@@ -353,6 +370,10 @@ if (btnCopy) {
             btnCopy.textContent = "¡Copiado!";
             setTimeout(() => btnCopy.textContent = original, 1000);
         });
+
+        
+
+        if(btnReset) btnReset.focus();
     });
 }
 
@@ -415,6 +436,10 @@ if (btnReset) {
 
         // 4. FOCO AL ID (PARA LA SIGUIENTE LLAMADA - SOLUCIÓN)
         if (callIdInput) callIdInput.focus();
+        
+        if(timerPanel) {
+            timerPanel.classList.add('hidden')
+        }
     });
 }
 
@@ -527,13 +552,83 @@ if (btnClear) {
 }
 
 /* =========================================
-   9. CLAVES RÁPIDAS
+   3.5 FUNCIÓN AUXILIAR DE TIEMPO
    ========================================= */
-const claves = { 'btn_key_elite': 'Elite123*', 'btn_key_fenix': 'Fenix2024!', 'btn_key_pwd': 'AdminPassword' };
-Object.keys(claves).forEach(id => {
-    const btn = document.getElementById(id);
-    if(btn) btn.addEventListener('click', () => navigator.clipboard.writeText(claves[id]));
-});
+function formatoMMSS(segundos) {
+    const m = Math.floor(segundos / 60).toString().padStart(2, '0');
+    const s = Math.floor(segundos % 60).toString().padStart(2, '0');
+    return `${m}:${s}`;
+}
+
+/* =========================================
+   4. LÓGICA DEL TEMPORIZADOR (MOTOR CON UI)
+   ========================================= */
+function gestionarTimerRetoma(esReinicioManual = false) {
+    // 1. Mostrar el panel si estaba oculto
+    if (timerPanel) timerPanel.classList.remove('hidden');
+
+    // 2. Limpiar timer anterior
+    if (timerRetoma) clearInterval(timerRetoma);
+
+    retomaStartTime = Date.now();
+    
+    // Asegurarnos de tener hora de inicio global
+    if (!horaInicioLlamada) horaInicioLlamada = Date.now();
+
+    if (esReinicioManual) {
+        primeraAlarmaSonada = true; 
+        proximaAlarmaSegundos = 115;
+        console.log("🔄 Reinicio: Cuenta regresiva de 1:55 min");
+    } else {
+        primeraAlarmaSonada = false;
+        proximaAlarmaSegundos = 45;
+        console.log("⏱️ Inicio: Cuenta regresiva de 45s");
+    }
+
+    // 3. Iniciar el intervalo (Se ejecuta cada segundo)
+    timerRetoma = setInterval(() => {
+        const ahora = Date.now();
+        
+        // A. Calcular tiempo transcurrido en este ciclo de retoma
+        const segundosCiclo = Math.floor((ahora - retomaStartTime) / 1000);
+        
+        // B. Calcular Duración Total de la llamada
+        const segundosTotal = Math.floor((ahora - horaInicioLlamada) / 1000);
+        if (displayTotal) displayTotal.textContent = formatoMMSS(segundosTotal);
+
+        // C. Calcular Cuenta Regresiva (Lo que falta para la alarma)
+        let falta = proximaAlarmaSegundos - segundosCiclo;
+        
+        // Evitar números negativos visuales un momento antes del reset
+        if (falta < 0) falta = 0; 
+        
+        if (displayCountdown) {
+            displayCountdown.textContent = formatoMMSS(falta);
+            
+            // Efecto visual: Rojo si faltan menos de 10 segundos
+            if (falta <= 10) {
+                displayCountdown.classList.add('danger');
+            } else {
+                displayCountdown.classList.remove('danger');
+            }
+        }
+
+        // D. Lógica de la Alarma
+        if (segundosCiclo >= proximaAlarmaSegundos) {
+            sonarAlertaRetoma(); // ¡Sonido!
+
+            if (!primeraAlarmaSonada) {
+                // Pasamos de 45s a 115s
+                primeraAlarmaSonada = true;
+                proximaAlarmaSegundos = segundosCiclo + 115;
+            } else {
+                // Sumamos 115s al objetivo actual
+                proximaAlarmaSegundos += 115;
+            }
+        }
+    }, 1000);
+}
+
 
 // INICIO AUTOMÁTICO
 function init() {

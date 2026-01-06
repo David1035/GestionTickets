@@ -19,7 +19,7 @@ body {
   background-color: var(--bg-color);
   color: var(--text-main);
   display: flex;
-  justify-content: center;
+  flex-direction: column;
   align-items: center; /* Centrado vertical */
   min-height: 100vh;
   margin: 0;
@@ -216,6 +216,21 @@ button:active { transform: scale(0.97); }
 }
 
 /* =========================================
+   MEJORA VISUAL: FOCO EN BOTÓN REINICIAR
+   ========================================= */
+
+/* Cuando el botón Reiniciar tiene el foco (listo para Enter) */
+#btn_reset:focus {
+  outline: 2px solid #1f2937; /* La "Franja Negra" gruesa */
+
+}
+
+/* Opcional: Para que la transición sea suave */
+#btn_reset {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* =========================================
    7. SECCIÓN B2B
    ========================================= */
 .b2b-section {
@@ -367,4 +382,75 @@ button:active { transform: scale(0.97); }
 }
 .btn-key.mod:hover {
   background-color: #dcfce7;
+}
+
+/* =========================================
+   10. PANEL DE TIEMPOS (NUEVO)
+   ========================================= */
+.timer-panel {
+  background-color: white;
+  margin-top: 15px; /* Separación del contenedor principal */
+  padding: 15px 20px;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  width: 100%;
+  max-width: 400px; /* Un poco más pequeño que la tarjeta principal */
+  border: 1px solid #e2e8f0;
+  animation: slideUp 0.3s ease-out;
+}
+
+.timer-panel.hidden {
+  display: none;
+}
+
+.timer-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.timer-label {
+  font-size: 0.75rem;
+  color: #64748b;
+  font-weight: 700;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+.timer-value {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #334155;
+  font-variant-numeric: tabular-nums; /* Evita que los números salten */
+  letter-spacing: 1px;
+}
+
+.timer-value.countdown {
+  color: #2563eb; /* Azul por defecto */
+}
+
+/* Cuando falta poco tiempo (menos de 10s) */
+.timer-value.danger {
+  color: #ef4444;
+  animation: pulseRed 1s infinite;
+}
+
+.timer-divider {
+  width: 1px;
+  height: 40px;
+  background-color: #cbd5e1;
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulseRed {
+  0% { opacity: 1; }
+  50% { opacity: 0.6; }
+  100% { opacity: 1; }
 }
