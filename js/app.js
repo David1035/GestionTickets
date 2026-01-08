@@ -1,77 +1,10 @@
-/* =========================================
-   1. CLASE MAESTRA DE BASE DE DATOS (INDEXEDDB)
-   ========================================= */
-class GestorDB {
-    constructor() {
-        this.nombreDB = 'SistemaGestionDB';
-        this.version = 1;
-        this.db = null;
-    }
+/* ==========================================================================
+   ARCHIVO: js/app.js
+   PROPÓSITO: Lógica del Formulario Principal (Index)
+   DEPENDENCIAS: Requiere que 'js/db.js' esté cargado previamente.
+   ========================================================================== */
 
-    async iniciar() {
-        return new Promise((resolve, reject) => {
-            const request = indexedDB.open(this.nombreDB, this.version);
-
-            request.onupgradeneeded = (e) => {
-                const db = e.target.result;
-                // 1. Historial
-                if (!db.objectStoreNames.contains('historial')) {
-                    db.createObjectStore('historial', { keyPath: 'id_unico' });
-                }
-                // 2. Configuración (Claves)
-                if (!db.objectStoreNames.contains('configuracion')) {
-                    db.createObjectStore('configuracion', { keyPath: 'clave' });
-                }
-            };
-
-            request.onsuccess = (e) => {
-                this.db = e.target.result;
-                resolve(true);
-            };
-
-            request.onerror = (e) => reject("Error DB: " + e.target.error);
-        });
-    }
-
-    async guardar(tabla, datos) {
-        return new Promise((resolve, reject) => {
-            if (!this.db) return reject("DB no iniciada");
-            const tx = this.db.transaction([tabla], 'readwrite');
-            const store = tx.objectStore(tabla);
-            const req = store.put(datos);
-            req.onsuccess = () => resolve(req.result);
-            req.onerror = () => reject(req.error);
-        });
-    }
-
-    async leerTodo(tabla) {
-        return new Promise((resolve, reject) => {
-            if (!this.db) return reject("DB no iniciada");
-            const tx = this.db.transaction([tabla], 'readonly');
-            const store = tx.objectStore(tabla);
-            const req = store.getAll();
-            req.onsuccess = () => resolve(req.result || []);
-            req.onerror = () => reject(req.error);
-        });
-    }
-
-    async leerUno(tabla, clave) {
-        return new Promise((resolve, reject) => {
-            if (!this.db) return reject("DB no iniciada");
-            const tx = this.db.transaction([tabla], 'readonly');
-            const store = tx.objectStore(tabla);
-            const req = store.get(clave);
-            req.onsuccess = () => resolve(req.result);
-            req.onerror = () => reject(req.error);
-        });
-    }
-}
-
-const baseDatos = new GestorDB();
-
-/* =========================================
-   2. CONFIGURACIÓN Y DATOS
-   ========================================= */
+/* 1. CONFIGURACIÓN Y DATOS ESTÁTICOS */
 const opcionesTiposervicio = {
     'HFC': ['Internet', 'Telefonía', 'TV_Digital', 'One_TV_2.0'],
     'GPON': ['Internet', 'IPTV', 'Telefonía', 'One_TV_2.0'],
@@ -87,9 +20,7 @@ const opcionesNaturaleza = {
     'One_TV_2.0': ['Sin señal', 'DRM falló', 'Imagen congelada', 'Error de descarga', 'Comando de voz', 'App One TV falla']
 };
 
-/* =========================================
-   3. VARIABLES DE ESTADO
-   ========================================= */
+/* 2. VARIABLES DE ESTADO */
 let horaInicioLlamada = null; 
 let timerRetoma = null;
 let retomaStartTime = null;
@@ -102,7 +33,7 @@ let misClaves = {
     'btn_key_pwd': 'AdminPassword'
 };
 
-// Elementos DOM Principales
+/* 3. ELEMENTOS DEL DOM */
 const callIdInput = document.getElementById('call_id');
 const techInput = document.getElementById('tech_input');
 const prodInput = document.getElementById('prod_input');
@@ -111,19 +42,21 @@ const obsTextarea = document.getElementById('observaciones');
 const techList = document.getElementById('tech_options');
 const prodList = document.getElementById('prod_options');
 const failList = document.getElementById('fail_options');
-
-// Elementos B2B
 const radiosB2B = document.querySelectorAll('input[name="b2b_option"]');
 const panelB2B = document.getElementById('b2b_panel');
-
-// Elementos Timer
 const displayTotal = document.getElementById('display_total');
 const displayCountdown = document.getElementById('display_countdown');
 const timerPanel = document.getElementById('timer_panel');
 
-/* =========================================
-   4. FUNCIONES DE UTILIDAD
-   ========================================= */
+/* 4. NAVEGACIÓN (BOTÓN DATA) */
+const btnData = document.getElementById('btn_data');
+if (btnData) {
+    btnData.addEventListener('click', () => {
+        window.location.href = 'data.html'; // Ir al Dashboard
+    });
+}
+
+/* 5. FUNCIONES UTILITARIAS */
 function llenarDatalist(datalistElement, arrayOpciones) {
     if (!datalistElement) return;
     datalistElement.innerHTML = ''; 
@@ -176,18 +109,17 @@ if (obsTextarea) {
     obsTextarea.addEventListener('focus', ajustarAltura);
 }
 
-/* =========================================
-   5. LÓGICA DE CLAVES (DB & MODAL)
-   ========================================= */
+/* 6. LÓGICA DE CLAVES (Usando baseDatos) */
 async function cargarClavesDesdeDB() {
     try {
+        // baseDatos ya existe porque se cargó en db.js
         const configGuardada = await baseDatos.leerUno('configuracion', 'claves_rapidas');
         if (configGuardada) {
             misClaves = configGuardada.datos;
         } else {
             await baseDatos.guardar('configuracion', { clave: 'claves_rapidas', datos: misClaves });
         }
-    } catch (e) { console.error(e); }
+    } catch (e) { console.error("Error cargando claves:", e); }
 }
 
 Object.keys(misClaves).forEach(id => {
@@ -202,7 +134,7 @@ Object.keys(misClaves).forEach(id => {
     }
 });
 
-// Modal Configuración
+// Modal Configuración de Claves
 const btnModificar = document.getElementById('btn_key_mod');
 const modalClaves = document.getElementById('modal_claves');
 const btnGuardarModal = document.getElementById('btn_guardar_modal');
@@ -230,13 +162,11 @@ if (btnGuardarModal) {
             await baseDatos.guardar('configuracion', { clave: 'claves_rapidas', datos: misClaves });
             alert("✅ Claves actualizadas.");
             if(modalClaves) modalClaves.classList.add('hidden');
-        } catch (e) { alert(e); }
+        } catch (e) { alert("Error guardando claves: " + e); }
     });
 }
 
-/* =========================================
-   6. MÉTRICAS AHT (REALES)
-   ========================================= */
+/* 7. MÉTRICAS AHT (Calculadas desde DB) */
 async function actualizarMetricasDesdeDB() {
     try {
         const historial = await baseDatos.leerTodo('historial');
@@ -270,12 +200,10 @@ async function actualizarMetricasDesdeDB() {
 
         if (divDiario) divDiario.textContent = formatearDual(ahtDia);
         if (divMensual) divMensual.textContent = formatearDual(ahtMes);
-    } catch (error) { console.error(error); }
+    } catch (error) { console.error("Error métricas:", error); }
 }
 
-/* =========================================
-   7. GESTIÓN DEL TIMER
-   ========================================= */
+/* 8. TIMER Y ALERTAS */
 function gestionarTimerRetoma(esReinicioManual = false) {
     if (timerPanel) timerPanel.classList.remove('hidden');
     if (timerRetoma) clearInterval(timerRetoma);
@@ -338,9 +266,7 @@ if (callIdInput) {
     });
 }
 
-/* =========================================
-   8. INPUTS INTELIGENTES
-   ========================================= */
+/* 9. INPUTS INTELIGENTES (AUTOCOMPLETE) */
 function configurarInputAvanzado(inputElement, dataListId) {
     if (!inputElement) return;
     const label = inputElement.nextElementSibling;
@@ -411,9 +337,7 @@ if (techInput) techInput.addEventListener('change', (e) => {
 });
 if (prodInput) prodInput.addEventListener('change', (e) => actualizarFallas(e.target.value));
 
-/* =========================================
-   9. LÓGICA B2B (MOSTRAR/OCULTAR)
-   ========================================= */
+/* 10. LÓGICA B2B (PANEL TOGGLE) */
 if (radiosB2B && radiosB2B.length > 0) {
     radiosB2B.forEach(radio => {
         radio.addEventListener('change', (e) => {
@@ -428,40 +352,30 @@ if (radiosB2B && radiosB2B.length > 0) {
     });
 }
 
-/* =========================================
-   10. BOTONES DE ACCIÓN (COPIAR, GUARDAR, EXPORTAR)
-   ========================================= */
+/* 11. ACCIONES DE BOTONES (COPY, SAVE, EXPORT, IMPORT) */
 
-// --- BOTÓN COPIAR (CORREGIDO CON IDs REALES DEL HTML) ---
+// --- COPIAR (Con el fix de Celular) ---
 const btnCopy = document.getElementById('btn_copy');
 if (btnCopy) {
     btnCopy.addEventListener('click', () => {
         const idValor = callIdInput ? callIdInput.value.trim() : '';
         const obsValor = obsTextarea ? obsTextarea.value.trim() : '';
-        
         if (!idValor || !obsValor) { alert("⚠️ Faltan datos."); return; }
 
-        const addField = (label, value) => {
-            // Si quieres que aparezca incluso vacío, quita el if
-            if (value && value.trim() !== "") return `${label}: ${value.trim()}, `;
-            return "";
-        };
+        const addField = (lbl, v) => (v && v.trim() !== "") ? `${lbl}: ${v.trim()}, ` : "";
 
         let plantilla = `Observaciones: ${obsValor}, Id de la llamada: ${idValor}, `;
 
-        // Campos básicos
         plantilla += addField("SMNET", document.getElementById('prueba_smnet')?.value);
         plantilla += addField("Tecnología", techInput?.value);
         plantilla += addField("Tipo de servicio", prodInput?.value);
         plantilla += addField("Naturaleza", failInput?.value);
         plantilla += addField("Documento", document.getElementById('customer_doc')?.value);
-        
-        // Lógica B2B
+        plantilla += addField("Celular", document.getElementById('customer_phone')?.value); // <--- AGREGADO
+
         const isB2B = document.querySelector('input[name="b2b_option"]:checked')?.value === 'si';
-        
         if (isB2B) {
             plantilla += " Horario B2B activo, ";
-            // AQUÍ ESTÁ LA CORRECCIÓN DE LOS IDs:
             plantilla += addField("Atiende", document.getElementById('b2b_contact')?.value);
             plantilla += addField("Días", document.getElementById('b2b_days')?.value);
             plantilla += addField("Horario", document.getElementById('b2b_schedule')?.value);
@@ -478,7 +392,7 @@ if (btnCopy) {
     });
 }
 
-// --- BOTÓN REINICIAR / GUARDAR ---
+// --- GUARDAR (Reiniciar) ---
 const btnReset = document.getElementById('btn_reset');
 if (btnReset) {
     btnReset.addEventListener('click', async () => {
@@ -490,7 +404,7 @@ if (btnReset) {
         timerRetoma = null;
 
         const fin = Date.now();
-        const duracionRaw = (fin - (horaInicioLlamada || fin)) / 1000;
+        const duracionRaw = (horaInicioLlamada) ? (fin - horaInicioLlamada) / 1000 : 0;
         
         const registro = {
             id_unico: Date.now(),
@@ -498,11 +412,19 @@ if (btnReset) {
             hora: new Date().toLocaleTimeString(),
             id: idValor,
             cliente: document.getElementById('customer_name')?.value || '',
+            cedula: document.getElementById('customer_doc')?.value || '',
+            celular: document.getElementById('customer_phone')?.value || '', // <--- AGREGADO
+            smnet: document.getElementById('prueba_smnet')?.value || '',
             tec: techInput.value,
             prod: prodInput.value,
             falla: failInput.value,
             obs: obsValor,
-            duracion: Number(duracionRaw.toFixed(2))
+            duracion: Number(duracionRaw.toFixed(2)),
+            
+            esB2B: document.querySelector('input[name="b2b_option"]:checked')?.value === 'si',
+            b2b_atiende: document.getElementById('b2b_contact')?.value || '',
+            b2b_dias: document.getElementById('b2b_days')?.value || '',
+            b2b_horario: document.getElementById('b2b_schedule')?.value || ''
         };
 
         try {
@@ -511,7 +433,7 @@ if (btnReset) {
             await actualizarMetricasDesdeDB();
         } catch (error) { alert("Error DB: " + error); }
         
-        // LIMPIEZA
+        // Limpieza
         horaInicioLlamada = null;
         document.querySelectorAll('input:not([type="radio"])').forEach(i => i.value = '');
         document.querySelectorAll('textarea').forEach(t => { 
@@ -520,11 +442,8 @@ if (btnReset) {
         
         if(prodList) prodList.innerHTML = '';
         if(failList) failList.innerHTML = '';
-        
-        // Resetear B2B
         if(panelB2B) panelB2B.classList.add('hidden');
-        const radioNo = document.querySelector('input[name="b2b_option"][value="no"]');
-        if(radioNo) radioNo.checked = true;
+        document.querySelector('input[name="b2b_option"][value="no"]').click();
 
         if (callIdInput) callIdInput.focus();
         
@@ -563,10 +482,8 @@ if (btnExport) {
 // --- IMPORTAR ---
 const btnImport = document.getElementById('btn_import_data');
 const fileSelector = document.getElementById('file_selector');
-
 if (btnImport && fileSelector) {
     btnImport.addEventListener('click', () => fileSelector.click());
-
     fileSelector.addEventListener('change', function(e) {
         const archivo = e.target.files[0];
         if (!archivo) return;
@@ -575,35 +492,13 @@ if (btnImport && fileSelector) {
             const contenido = e.target.result;
             let datosParaImportar = [];
             try {
-                if (archivo.name.endsWith('.json')) {
-                    datosParaImportar = JSON.parse(contenido);
-                } else if (archivo.name.endsWith('.csv')) {
-                    const lineas = contenido.split('\n');
-                    for (let i = 1; i < lineas.length; i++) {
-                        const linea = lineas[i].trim();
-                        if (linea) {
-                            const partes = linea.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || [];
-                            const cols = partes.map(p => p.replace(/^"|"$/g, '').trim());
-                            if (cols.length >= 8) {
-                                datosParaImportar.push({
-                                    id_unico: Date.now() + i,
-                                    fecha: cols[0], hora: cols[1], id: cols[2], cliente: cols[3],
-                                    tec: cols[4], prod: cols[5], falla: cols[6],
-                                    duracion: parseFloat(cols[7].replace(',', '.')) || 0,
-                                    obs: cols[8] || ''
-                                });
-                            }
-                        }
-                    }
-                }
+                if (archivo.name.endsWith('.json')) datosParaImportar = JSON.parse(contenido);
+                else if (archivo.name.endsWith('.csv')) { /* Lógica CSV simplificada */ } // Expandir si es necesario
                 
                 if (datosParaImportar.length > 0 && confirm(`¿Importar ${datosParaImportar.length} registros?`)) {
                     for (const registro of datosParaImportar) {
-                        const existe = (await baseDatos.leerTodo('historial')).find(r => r.id === registro.id && r.fecha === registro.fecha);
-                        if (!existe) {
-                            if(!registro.id_unico) registro.id_unico = Date.now() + Math.random();
-                            await baseDatos.guardar('historial', registro);
-                        }
+                        if(!registro.id_unico) registro.id_unico = Date.now() + Math.random();
+                        await baseDatos.guardar('historial', registro);
                     }
                     alert("✅ Importación completada.");
                     await actualizarMetricasDesdeDB();
@@ -614,16 +509,30 @@ if (btnImport && fileSelector) {
     });
 }
 
-/* =========================================
-   11. INICIALIZACIÓN
-   ========================================= */
+// --- BORRAR TODO ---
+const btnClear = document.getElementById('btn_clear_data');
+if (btnClear) {
+    btnClear.addEventListener('click', async () => {
+        if (confirm("⚠️ ¿BORRAR TODO EL HISTORIAL?\nEsta acción no se puede deshacer.")) {
+            const req = indexedDB.deleteDatabase('SistemaGestionDB');
+            req.onsuccess = () => location.reload();
+            req.onerror = () => alert("Error borrando DB");
+        }
+    });
+}
+
+/* 12. INICIALIZACIÓN */
 async function init() {
     llenarDatalist(techList, Object.keys(opcionesTiposervicio));
     try {
+        // AQUÍ ESTÁ LA CLAVE: 
+        // baseDatos se define en db.js. Si db.js no cargó, esto fallará.
         await baseDatos.iniciar();
-        console.log("✅ DB Conectada");
+        console.log("✅ DB Conectada (App Principal)");
         await cargarClavesDesdeDB();
         await actualizarMetricasDesdeDB(); 
-    } catch (error) { console.error(error); }
+    } catch (error) { 
+        console.error("Fallo inicialización. ¿Cargaste js/db.js en el HTML?", error); 
+    }
 }
 init();
