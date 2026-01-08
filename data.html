@@ -27,7 +27,6 @@
 
             <button class="tool-btn" id="btn_refresh" style="height: 48px; background: white; border: 1px solid #cbd5e1;">🔄 Recargar</button>
             <button class="tool-btn" id="btn_export_dash" style="height: 48px; background: white; border: 1px solid #cbd5e1;">📥 Exportar CSV</button>
-
             <button class="tool-btn" id="btn_export_json" style="height: 48px; background: #f8fafc; border: 1px solid #2563eb; color: #2563eb;">📦 Respaldar JSON</button>
         </div>
 
@@ -35,22 +34,22 @@
             <table class="modern-table" id="tabla_registros">
                 <thead>
                     <tr>
+                        <th style="text-align: center; width: 100px;">Acciones</th>
                         <th>Fecha</th>
                         <th>ID Llamada</th>
+                        <th>Observaciones</th>
                         <th>Cliente</th>
                         <th>Celular</th>
                         <th>Tecnología</th>
                         <th>Falla</th>
                         <th>Duración</th>
-                        <th>Observaciones</th>
-                        <th style="text-align: center;">Acciones</th>
+                        
                     </tr>
                 </thead>
-                <tbody id="dashboard_body">
-                    </tbody>
+                <tbody id="dashboard_body"></tbody>
             </table>
             <div id="no_results" style="padding: 40px; text-align: center; color: #64748b; display: none;">
-                <p style="font-size: 1.2rem;">📭 No se encontraron registros con ese criterio.</p>
+                <p style="font-size: 1.2rem;">📭 No se encontraron registros.</p>
             </div>
         </div>
     </div>
@@ -81,7 +80,6 @@
                     <input type="text" id="edit_cedula" placeholder=" ">
                     <label>Cédula</label>
                 </div>
-                
                 <div class="floating-group">
                     <input type="text" id="edit_tec" placeholder=" ">
                     <label>Tecnología</label>
@@ -90,19 +88,17 @@
                     <input type="text" id="edit_falla" placeholder=" ">
                     <label>Falla</label>
                 </div>
-
                 <div class="floating-group">
                     <input type="number" id="edit_minutos" placeholder=" " step="0.1">
-                    <label>⏱️ Minutos (Calculadora)</label>
+                    <label>⏱️ Minutos</label>
                 </div>
                 <div class="floating-group">
                     <input type="number" id="edit_duracion" placeholder=" " step="0.01">
-                    <label>⏱️ Segundos (Real en DB)</label>
+                    <label>⏱️ Segundos</label>
                 </div>
-
                 <div class="floating-group modal-full">
                     <textarea id="edit_obs" placeholder=" "></textarea>
-                    <label>Observaciones (Se expande)</label>
+                    <label>Observaciones</label>
                 </div>
             </div>
 
@@ -112,6 +108,8 @@
             </div>
         </div>
     </div>
+
+    <div id="toast" class="toast">✅ Copiado al portapapeles</div>
 
     <script src="js/db.js"></script>
     <script src="js/dashboard.js"></script>
