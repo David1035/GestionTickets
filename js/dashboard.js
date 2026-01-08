@@ -10,6 +10,7 @@ const btnRefresh = document.getElementById('btn_refresh');
 const msgNoResults = document.getElementById('no_results');
 const btnExport = document.getElementById('btn_export_dash');
 const btnBackHome = document.getElementById('btn_back_home');
+const btnExportJson = document.getElementById('btn_export_json');
 
 // Modal Elements
 const modal = document.getElementById('modal_edicion');
@@ -214,6 +215,46 @@ window.borrarRegistro = async (idUnico) => {
 txtSearch.addEventListener('input', aplicarFiltros);
 numLimit.addEventListener('change', aplicarFiltros);
 btnRefresh.addEventListener('click', cargarDatos);
+
+
+//exportar a json
+if (btnExportJson) {
+    btnExportJson.addEventListener('click', () => {
+        // 1. Verificamos si hay datos cargados en la variable global
+        if (!todosLosRegistros || todosLosRegistros.length === 0) {
+            alert("⚠️ No hay datos en el historial para exportar.");
+            return;
+        }
+
+        try {
+            // 2. Convertimos el array de objetos a una cadena JSON con sangría (2 espacios)
+            const dataStr = JSON.stringify(todosLosRegistros, null, 2);
+            
+            // 3. Creamos un Blob (Binary Large Object) tipo JSON
+            const dataBlob = new Blob([dataStr], { type: 'application/json' });
+            
+            // 4. Creamos el link de descarga
+            const url = URL.createObjectURL(dataBlob);
+            const link = document.createElement('a');
+            
+            // Nombre del archivo con fecha actual
+            const fecha = new Date().toLocaleDateString().replace(/\//g, '-');
+            link.download = `Backup_Historial_${fecha}.json`;
+            link.href = url;
+            
+            // 5. Forzamos la descarga y limpiamos
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+            
+            console.log("✅ Backup JSON generado con éxito");
+        } catch (error) {
+            console.error("Error al exportar JSON:", error);
+            alert("❌ Hubo un error al generar el archivo JSON.");
+        }
+    });
+}
 
 // Exportar filtrado
 btnExport.addEventListener('click', () => {
