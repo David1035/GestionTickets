@@ -10,7 +10,6 @@
   --text-main: #1f2937;
   --text-muted: #6b7280;
   --border-color: #cbd5e1;
-  --input-fill-bg: #f8fafc;
   --input-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
 }
 
@@ -20,76 +19,32 @@ body {
   color: var(--text-main);
   display: flex;
   flex-direction: column;
-  align-items: center; /* Centrado vertical */
+  align-items: center;
   min-height: 100vh;
   margin: 0;
-  padding: 10px; /* Un poco de margen en móviles */
+  padding: 10px;
 }
 
 /* =========================================
-   2. CONTENEDOR PRINCIPAL (COMPACTO)
+   2. CONTENEDOR PRINCIPAL
    ========================================= */
 .card-container {
   background-color: var(--card-bg);
-  padding: 1.2rem; /* Compacto */
+  padding: 1.5rem;
   border-radius: 12px;
   box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
   width: 100%;
-  max-width: 500px; /* Ancho controlado */
+  max-width: 500px;
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 12px;
 }
 
-/* =========================================
-   3. BARRA DE HERRAMIENTAS SUPERIOR
-   ========================================= */
-.top-toolbar {
-    display: flex;
-    gap: 8px;
-    padding-bottom: 10px;
-    border-bottom: 1px solid #e5e7eb;
-    margin-bottom: 10px;
-    justify-content: space-between;
-    flex-wrap: wrap;
-}
-
-.tool-btn {
-    background-color: transparent;
-    border: 1px solid transparent;
-    color: #64748b;
-    padding: 6px 10px;
-    font-size: 0.8rem;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: all 0.2s;
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    font-weight: 600;
-    flex: 1;
-    justify-content: center;
-    white-space: nowrap;
-}
-
-.tool-btn:hover {
-    background-color: #f1f5f9;
-    color: var(--primary-color);
-    border-color: #cbd5e1;
-    transform: translateY(-1px);
-}
-
-.tool-btn:active {
-    transform: scale(0.95);
-}
-
-/* =========================================
-   4. SISTEMA DE FILAS (GRID)
-   ========================================= */
+/* SISTEMA DE REJILLA (FILAS) */
 .row {
   display: flex;
-  gap: 10px; /* Separación horizontal */
-  margin-bottom: 12px; /* Separación vertical */
+  gap: 10px;
+  width: 100%;
 }
 .row .floating-group {
   flex: 1;
@@ -99,7 +54,7 @@ body {
 }
 
 /* =========================================
-   5. INPUTS FLOTANTES (EFECTO GHOST / AIRE)
+   3. SISTEMA DE INPUTS (ESTILO UNIFICADO)
    ========================================= */
 .floating-group {
   position: relative;
@@ -107,10 +62,11 @@ body {
   width: 100%;
 }
 
+/* Estilos base para Input y Textarea */
 .floating-group input, 
 .floating-group textarea {
   width: 100%;
-  padding: 12px 10px; /* Padding equilibrado */
+  padding: 12px 10px;
   border: 1.5px solid var(--border-color);
   border-radius: 8px;
   background-color: #ffffff;
@@ -122,35 +78,34 @@ body {
   box-shadow: var(--input-shadow);
 }
 
+/* Altura específica para textarea */
 .floating-group textarea {
-  min-height: 60px; /* Altura compacta para observaciones */
-  resize: none; 
+  min-height: 60px;
+  resize: none;
   overflow: hidden;
 }
 
-/* EFECTO: Input relleno o con foco */
-.floating-group input:not(:placeholder-shown),
-.floating-group textarea:not(:placeholder-shown) {
-  background-color: #fff; /* Mantener blanco para limpieza */
-  border-color: #94a3b8;
-}
-
+/* ESTADOS DEL INPUT: Focus y No vacío */
 .floating-group input:focus, 
 .floating-group textarea:focus {
   outline: none;
   border-color: var(--primary-color);
-  background-color: #fff;
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
 }
 
-/* ETIQUETA (LABEL) - ESTADO NORMAL */
+.floating-group input:not(:placeholder-shown),
+.floating-group textarea:not(:placeholder-shown) {
+  border-color: #94a3b8;
+}
+
+/* ETIQUETA (LABEL) - ESTADO INICIAL */
 .floating-group label {
   position: absolute;
-  top: 50%; /* Centrado perfecto verticalmente */
+  top: 50%;
   transform: translateY(-50%);
   left: 10px;
   color: var(--text-muted);
-  pointer-events: none; /* Importante para poder hacer clic a través */
+  pointer-events: none;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   font-size: 0.9rem;
   padding: 0 4px;
@@ -158,45 +113,70 @@ body {
   border-radius: 4px;
 }
 
-/* ETIQUETA - ESTADO "EN EL AIRE" (GHOST) */
+/* ETIQUETA - ESTADO FLOTANTE (GHOST) */
 .floating-group input:focus ~ label,
 .floating-group input:not(:placeholder-shown) ~ label,
 .floating-group textarea:focus ~ label,
 .floating-group textarea:not(:placeholder-shown) ~ label {
-  top: 0; /* Se posienta justo en el borde superior */
-  transform: translateY(-50%); /* Lo sube para que quede mitad dentro mitad fuera */
+  top: 0;
+  transform: translateY(-50%);
   left: 10px;
   font-size: 0.75rem;
   color: var(--primary-color);
   font-weight: 700;
-  background-color: #ffffff; /* FONDO BLANCO PARA "CORTAR" LA LÍNEA */
-  z-index: 10; /* Asegura que quede encima del borde */
+  background-color: #ffffff; /* Importante: Fondo blanco para cortar el borde */
+  z-index: 10;
 }
 
-/* Ajuste específico para textarea (el label inicia arriba, no en el centro) */
-.floating-group textarea ~ label {
-  top: 15px;
-  transform: none;
-}
+/* Ajuste especial para etiqueta de textarea */
+.floating-group textarea ~ label { top: 20px; transform: none; }
 .floating-group textarea:focus ~ label,
-.floating-group textarea:not(:placeholder-shown) ~ label {
-  top: 0;
-  transform: translateY(-50%);
+.floating-group textarea:not(:placeholder-shown) ~ label { top: 0; transform: translateY(-50%); }
+
+
+/* =========================================
+   4. BARRA DE HERRAMIENTAS (TOP)
+   ========================================= */
+.top-toolbar {
+    display: flex;
+    gap: 8px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #e5e7eb;
+    margin-bottom: 5px;
+    justify-content: space-between;
+    flex-wrap: wrap;
+}
+
+.tool-btn {
+    background: transparent;
+    border: 1px solid transparent;
+    color: #64748b;
+    padding: 6px 10px;
+    font-size: 0.8rem;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-weight: 600;
+    flex: 1;
+}
+
+.tool-btn:hover {
+    background-color: #f1f5f9;
+    color: var(--primary-color);
 }
 
 /* =========================================
-   6. BOTONES DE ACCIÓN
+   5. BOTONES DE ACCIÓN PRINCIPALES
    ========================================= */
 .actions {
   display: flex;
   gap: 10px;
   margin-top: 5px;
-  margin-bottom: 10px;
 }
 
-button {
+.actions button {
   flex: 1;
-  padding: 10px;
+  padding: 12px;
   border: none;
   border-radius: 8px;
   font-weight: 600;
@@ -204,99 +184,78 @@ button {
   font-size: 0.95rem;
   transition: transform 0.1s;
 }
-button:active { transform: scale(0.97); }
 
-#btn_copy {
-  background-color: var(--primary-color);
-  color: white;
-}
-#btn_reset {
-  background-color: var(--danger-color);
-  color: white;
-}
+.actions button:active { transform: scale(0.97); }
 
-/* =========================================
-   MEJORA VISUAL: FOCO EN BOTÓN REINICIAR
-   ========================================= */
+#btn_copy { background-color: var(--primary-color); color: white; }
+#btn_copy:hover { background-color: var(--primary-hover); }
 
-/* Cuando el botón Reiniciar tiene el foco (listo para Enter) */
+#btn_reset { background-color: var(--danger-color); color: white; }
+#btn_reset:hover { background-color: #dc2626; }
+
+/* Foco especial para el botón Reiniciar */
 #btn_reset:focus {
-  outline: 2px solid #1f2937; /* La "Franja Negra" gruesa */
-
-}
-
-/* Opcional: Para que la transición sea suave */
-#btn_reset {
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  outline: 2px solid #1f2937;
+  outline-offset: 2px;
+  box-shadow: 0 0 10px rgba(239, 68, 68, 0.3);
 }
 
 /* =========================================
-   7. SECCIÓN B2B
+   6. SECCIÓN B2B (MODIFICADA PARA UNIFORMIDAD)
    ========================================= */
 .b2b-section {
   border-top: 1px dashed #cbd5e1;
-  padding-top: 10px;
-  margin-top: 5px;
+  padding-top: 15px;
+  margin-top: 10px;
 }
 
 .b2b-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 5px;
+  margin-bottom: 10px;
 }
 
 .section-title {
   margin: 0;
-  font-size: 0.85rem;
+  font-size: 0.9rem;
   font-weight: bold;
   color: #1e3a8a;
 }
 
-.radio-group {
-  display: flex;
-  gap: 15px;
-}
+.radio-group { display: flex; gap: 15px; }
+.radio-group label { font-size: 0.9rem; cursor: pointer; display: flex; align-items: center; gap: 5px; }
 
-.radio-group label {
-  font-size: 0.85rem;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 5px;
-}
-
-.hidden { display: none; }
-
+/* PANEL B2B - FONDO TRANSPARENTE PARA QUE LOS INPUTS SE VEAN IGUALES */
 #b2b_panel {
-  background-color: #eff6ff;
-  padding: 10px;
+  padding: 10px 5px; /* Un poco de padding lateral */
   border-radius: 8px;
   margin-top: 5px;
+  /* Fondo transparente o blanco para que coincida con el card */
+  background-color: transparent; 
+  /* Opcional: Un borde sutil para agrupar */
+  border: 1px solid #e2e8f0; 
   animation: slideDown 0.3s ease-out;
 }
+#b2b_panel.hidden { display: none; }
 
 .checkbox-wrapper {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-top: 5px;
+  margin-top: 10px;
   font-size: 0.85rem;
-}
-
-@keyframes slideDown {
-  from { opacity: 0; transform: translateY(-10px); }
-  to { opacity: 1; transform: translateY(0); }
+  padding-left: 5px;
 }
 
 /* =========================================
-   8. MÉTRICAS (AHT)
+   7. MÉTRICAS Y ESTADÍSTICAS
    ========================================= */
 .stats-container {
   display: flex;
   gap: 10px;
-  margin-top: 10px;
-  padding-top: 10px;
+  margin-top: 15px;
+  padding-top: 15px;
   border-top: 2px solid #f3f4f6;
 }
 
@@ -304,7 +263,7 @@ button:active { transform: scale(0.97); }
   background-color: #f8fafc;
   border: 1px solid #e2e8f0;
   border-radius: 10px;
-  padding: 8px;
+  padding: 10px;
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -312,31 +271,15 @@ button:active { transform: scale(0.97); }
   text-align: center;
 }
 
-.stat-label {
-  font-size: 0.7rem;
-  color: var(--text-muted);
-  font-weight: 700;
-  text-transform: uppercase;
-}
-
-.stat-value {
-  font-size: 1.1rem;
-  font-weight: 800;
-  color: #334155;
-  margin: 3px 0;
-  font-variant-numeric: tabular-nums;
-}
-
-.stat-sub {
-    font-size: 0.6rem;
-    color: #94a3b8;
-}
+.stat-label { font-size: 0.7rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; }
+.stat-value { font-size: 1.1rem; font-weight: 800; color: #334155; margin: 4px 0; font-variant-numeric: tabular-nums; }
+.stat-sub { font-size: 0.6rem; color: #94a3b8; }
 
 /* =========================================
-   9. BARRA DE CLAVES
+   8. BARRA DE CLAVES RÁPIDAS
    ========================================= */
 .key-bar {
-  margin-top: 10px;
+  margin-top: 15px;
   padding-top: 10px;
   border-top: 1px solid #e5e7eb;
   display: flex;
@@ -344,20 +287,12 @@ button:active { transform: scale(0.97); }
   gap: 8px;
 }
 
-.key-label {
-  font-size: 0.7rem;
-  color: var(--text-muted);
-  font-weight: 700;
-  text-transform: uppercase;
-}
+.key-label { font-size: 0.7rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; }
 
-.key-buttons {
-  display: flex;
-  gap: 5px;
-}
+.key-buttons { display: flex; gap: 5px; }
 
 .btn-key {
-  padding: 6px 8px;
+  padding: 8px 5px;
   font-size: 0.75rem;
   border-radius: 6px;
   border: 1px solid #cbd5e1;
@@ -369,27 +304,18 @@ button:active { transform: scale(0.97); }
   transition: all 0.2s;
 }
 
-.btn-key:hover {
-  background-color: #f1f5f9;
-  border-color: #94a3b8;
-  color: var(--primary-color);
-}
-
-.btn-key.mod {
-  background-color: #f0fdf4; /* Verde muy suave */
-  color: #166534;
-  border: 1px dashed #22c55e;
-}
-.btn-key.mod:hover {
-  background-color: #dcfce7;
-}
+.btn-key:hover { background-color: #f1f5f9; color: var(--primary-color); border-color: var(--primary-color); }
+.btn-key.mod { background-color: #f0fdf4; color: #166534; border: 1px dashed #22c55e; }
+.btn-key.mod:hover { background-color: #dcfce7; }
 
 /* =========================================
-   10. PANEL DE TIEMPOS (NUEVO)
+   9. COMPONENTES FLOTANTES (TIMER & MODAL)
    ========================================= */
+   
+/* TIMER PANEL */
 .timer-panel {
   background-color: white;
-  margin-top: 15px; /* Separación del contenedor principal */
+  margin-top: 15px;
   padding: 15px 20px;
   border-radius: 12px;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
@@ -397,60 +323,41 @@ button:active { transform: scale(0.97); }
   justify-content: space-around;
   align-items: center;
   width: 100%;
-  max-width: 400px; /* Un poco más pequeño que la tarjeta principal */
+  max-width: 400px;
   border: 1px solid #e2e8f0;
   animation: slideUp 0.3s ease-out;
 }
+.timer-panel.hidden { display: none; }
+.timer-box { display: flex; flex-direction: column; align-items: center; }
+.timer-label { font-size: 0.75rem; color: #64748b; font-weight: 700; text-transform: uppercase; margin-bottom: 4px; }
+.timer-value { font-size: 1.5rem; font-weight: 800; color: #334155; font-variant-numeric: tabular-nums; letter-spacing: 1px; }
+.timer-value.countdown { color: var(--primary-color); }
+.timer-value.danger { color: var(--danger-color); animation: pulseRed 1s infinite; }
+.timer-divider { width: 1px; height: 40px; background-color: #cbd5e1; }
 
-.timer-panel.hidden {
-  display: none;
+/* MODAL */
+.modal-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex; justify-content: center; align-items: center;
+    z-index: 1000;
+    backdrop-filter: blur(2px);
 }
+.modal-overlay.hidden { display: none; }
+.modal-content {
+    background: white; padding: 25px; border-radius: 12px; width: 90%; max-width: 350px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+    animation: zoomIn 0.2s ease-out;
+}
+.form-group-modal { margin-bottom: 15px; }
+.form-group-modal label { display: block; font-size: 0.8rem; font-weight: bold; margin-bottom: 5px; color: #475569; }
+.form-group-modal input { width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box;}
+.modal-actions { display: flex; gap: 10px; margin-top: 20px; }
+.btn-save { background-color: var(--primary-color); color: white; flex: 2; padding: 10px; border:none; border-radius:6px; cursor:pointer;}
+.btn-cancel { background-color: #cbd5e1; color: #334155; flex: 1; padding: 10px; border:none; border-radius:6px; cursor:pointer;}
 
-.timer-box {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-.timer-label {
-  font-size: 0.75rem;
-  color: #64748b;
-  font-weight: 700;
-  text-transform: uppercase;
-  margin-bottom: 4px;
-}
-
-.timer-value {
-  font-size: 1.5rem;
-  font-weight: 800;
-  color: #334155;
-  font-variant-numeric: tabular-nums; /* Evita que los números salten */
-  letter-spacing: 1px;
-}
-
-.timer-value.countdown {
-  color: #2563eb; /* Azul por defecto */
-}
-
-/* Cuando falta poco tiempo (menos de 10s) */
-.timer-value.danger {
-  color: #ef4444;
-  animation: pulseRed 1s infinite;
-}
-
-.timer-divider {
-  width: 1px;
-  height: 40px;
-  background-color: #cbd5e1;
-}
-
-@keyframes slideUp {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes pulseRed {
-  0% { opacity: 1; }
-  50% { opacity: 0.6; }
-  100% { opacity: 1; }
-}
+/* ANIMACIONES */
+@keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes zoomIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+@keyframes pulseRed { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }

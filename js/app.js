@@ -1,14 +1,76 @@
 /* =========================================
-   9. CLAVES RÁPIDAS
+   1. CLASE MAESTRA DE BASE DE DATOS (INDEXEDDB)
    ========================================= */
-const claves = { 'btn_key_elite': 'D24lj8Klo3l&/$l', 'btn_key_fenix': 'CRWS8T3JPICEZ8', 'btn_key_pwd': 'A22Aguamari$$++' };
-Object.keys(claves).forEach(id => {
-    const btn = document.getElementById(id);
-    if(btn) btn.addEventListener('click', () => navigator.clipboard.writeText(claves[id]));
-});
+class GestorDB {
+    constructor() {
+        this.nombreDB = 'SistemaGestionDB';
+        this.version = 1;
+        this.db = null;
+    }
+
+    async iniciar() {
+        return new Promise((resolve, reject) => {
+            const request = indexedDB.open(this.nombreDB, this.version);
+
+            request.onupgradeneeded = (e) => {
+                const db = e.target.result;
+                // 1. Historial
+                if (!db.objectStoreNames.contains('historial')) {
+                    db.createObjectStore('historial', { keyPath: 'id_unico' });
+                }
+                // 2. Configuración (Claves)
+                if (!db.objectStoreNames.contains('configuracion')) {
+                    db.createObjectStore('configuracion', { keyPath: 'clave' });
+                }
+            };
+
+            request.onsuccess = (e) => {
+                this.db = e.target.result;
+                resolve(true);
+            };
+
+            request.onerror = (e) => reject("Error DB: " + e.target.error);
+        });
+    }
+
+    async guardar(tabla, datos) {
+        return new Promise((resolve, reject) => {
+            if (!this.db) return reject("DB no iniciada");
+            const tx = this.db.transaction([tabla], 'readwrite');
+            const store = tx.objectStore(tabla);
+            const req = store.put(datos);
+            req.onsuccess = () => resolve(req.result);
+            req.onerror = () => reject(req.error);
+        });
+    }
+
+    async leerTodo(tabla) {
+        return new Promise((resolve, reject) => {
+            if (!this.db) return reject("DB no iniciada");
+            const tx = this.db.transaction([tabla], 'readonly');
+            const store = tx.objectStore(tabla);
+            const req = store.getAll();
+            req.onsuccess = () => resolve(req.result || []);
+            req.onerror = () => reject(req.error);
+        });
+    }
+
+    async leerUno(tabla, clave) {
+        return new Promise((resolve, reject) => {
+            if (!this.db) return reject("DB no iniciada");
+            const tx = this.db.transaction([tabla], 'readonly');
+            const store = tx.objectStore(tabla);
+            const req = store.get(clave);
+            req.onsuccess = () => resolve(req.result);
+            req.onerror = () => reject(req.error);
+        });
+    }
+}
+
+const baseDatos = new GestorDB();
 
 /* =========================================
-   1. CONFIGURACIÓN DE BASE DE DATOS
+   2. CONFIGURACIÓN Y DATOS
    ========================================= */
 const opcionesTiposervicio = {
     'HFC': ['Internet', 'Telefonía', 'TV_Digital', 'One_TV_2.0'],
@@ -26,46 +88,42 @@ const opcionesNaturaleza = {
 };
 
 /* =========================================
-   2. VARIABLES DE ESTADO Y ELEMENTOS
+   3. VARIABLES DE ESTADO
    ========================================= */
 let horaInicioLlamada = null; 
-
-// Variables del Temporizador
 let timerRetoma = null;
 let retomaStartTime = null;
 let primeraAlarmaSonada = false;
 let proximaAlarmaSegundos = 45;
 
+let misClaves = {
+    'btn_key_elite': 'Elite123*', 
+    'btn_key_fenix': 'Fenix2024!',
+    'btn_key_pwd': 'AdminPassword'
+};
 
-// Métricas y Persistencia
-let ahtDiario = JSON.parse(localStorage.getItem('aht_diario')) || { segundos: 0, llamadas: 0, fecha: new Date().toLocaleDateString() };
-let ahtMensual = JSON.parse(localStorage.getItem('aht_mensual')) || { segundos: 0, llamadas: 0 };
-let historialLlamadas = JSON.parse(localStorage.getItem('historial_llamadas')) || [];
-let mesGuardado = localStorage.getItem('mes_actual') || new Date().toISOString().slice(0, 7);
-
-// Elementos del DOM
+// Elementos DOM Principales
 const callIdInput = document.getElementById('call_id');
 const techInput = document.getElementById('tech_input');
 const prodInput = document.getElementById('prod_input');
 const failInput = document.getElementById('fail_input');
 const obsTextarea = document.getElementById('observaciones');
-
 const techList = document.getElementById('tech_options');
 const prodList = document.getElementById('prod_options');
 const failList = document.getElementById('fail_options');
 
+// Elementos B2B
 const radiosB2B = document.querySelectorAll('input[name="b2b_option"]');
 const panelB2B = document.getElementById('b2b_panel');
 
-
+// Elementos Timer
 const displayTotal = document.getElementById('display_total');
 const displayCountdown = document.getElementById('display_countdown');
 const timerPanel = document.getElementById('timer_panel');
-/* =========================================
-   3. FUNCIONES DE UTILIDAD (SONIDO Y UI)
-   ========================================= */
 
-// Llenar listas desplegables
+/* =========================================
+   4. FUNCIONES DE UTILIDAD
+   ========================================= */
 function llenarDatalist(datalistElement, arrayOpciones) {
     if (!datalistElement) return;
     datalistElement.innerHTML = ''; 
@@ -77,7 +135,6 @@ function llenarDatalist(datalistElement, arrayOpciones) {
     });
 }
 
-// Formato de tiempo "120s / 02:00m"
 function formatearDual(segundos) {
     const totalSeg = Math.round(segundos);
     const m = Math.floor(totalSeg / 60).toString().padStart(2, '0');
@@ -85,133 +142,241 @@ function formatearDual(segundos) {
     return `${totalSeg}s / ${m}.${s}m`;
 }
 
-// --- SONIDO SUAVE (ZEN) ---
+function formatoMMSS(segundos) {
+    const m = Math.floor(segundos / 60).toString().padStart(2, '0');
+    const s = Math.floor(segundos % 60).toString().padStart(2, '0');
+    return `${m}:${s}`;
+}
+
 function sonarAlertaRetoma() {
     const AudioContext = window.AudioContext || window.webkitAudioContext;
     if (!AudioContext) return;
-
     const audioCtx = new AudioContext();
     const oscillator = audioCtx.createOscillator();
     const gainNode = audioCtx.createGain();
-
     oscillator.type = 'sine'; 
-    oscillator.frequency.setValueAtTime(523.25, audioCtx.currentTime); // Nota Do (C5)
-
-    // Efecto Fade-In y Fade-Out para no asustar
+    oscillator.frequency.setValueAtTime(523.25, audioCtx.currentTime); 
     gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
     gainNode.gain.linearRampToValueAtTime(0.2, audioCtx.currentTime + 0.1); 
     gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 1.5);
-
     oscillator.connect(gainNode);
     gainNode.connect(audioCtx.destination);
-
     oscillator.start();
     oscillator.stop(audioCtx.currentTime + 1.5);
     setTimeout(() => audioCtx.close(), 1600);
 }
 
+// Auto-expandir Textarea
+if (obsTextarea) {
+    const ajustarAltura = () => {
+        obsTextarea.style.height = 'auto'; 
+        obsTextarea.style.height = (obsTextarea.scrollHeight) + 'px'; 
+    };
+    obsTextarea.addEventListener('input', ajustarAltura);
+    obsTextarea.addEventListener('focus', ajustarAltura);
+}
+
 /* =========================================
-   4. LÓGICA DEL TEMPORIZADOR (MOTOR)
+   5. LÓGICA DE CLAVES (DB & MODAL)
+   ========================================= */
+async function cargarClavesDesdeDB() {
+    try {
+        const configGuardada = await baseDatos.leerUno('configuracion', 'claves_rapidas');
+        if (configGuardada) {
+            misClaves = configGuardada.datos;
+        } else {
+            await baseDatos.guardar('configuracion', { clave: 'claves_rapidas', datos: misClaves });
+        }
+    } catch (e) { console.error(e); }
+}
+
+Object.keys(misClaves).forEach(id => {
+    const btn = document.getElementById(id);
+    if(btn) {
+        btn.addEventListener('click', () => {
+            navigator.clipboard.writeText(misClaves[id]);
+            const original = btn.textContent;
+            btn.textContent = "Copiado!";
+            setTimeout(() => btn.textContent = original, 800);
+        });
+    }
+});
+
+// Modal Configuración
+const btnModificar = document.getElementById('btn_key_mod');
+const modalClaves = document.getElementById('modal_claves');
+const btnGuardarModal = document.getElementById('btn_guardar_modal');
+const btnCancelarModal = document.getElementById('btn_cancelar_modal');
+
+if (btnModificar) {
+    btnModificar.addEventListener('click', () => {
+        document.getElementById('edit_key_elite').value = misClaves['btn_key_elite'];
+        document.getElementById('edit_key_fenix').value = misClaves['btn_key_fenix'];
+        document.getElementById('edit_key_pwd').value = misClaves['btn_key_pwd'];
+        if(modalClaves) modalClaves.classList.remove('hidden');
+    });
+}
+if (btnCancelarModal) {
+    btnCancelarModal.addEventListener('click', () => {
+        if(modalClaves) modalClaves.classList.add('hidden');
+    });
+}
+if (btnGuardarModal) {
+    btnGuardarModal.addEventListener('click', async () => {
+        misClaves['btn_key_elite'] = document.getElementById('edit_key_elite').value;
+        misClaves['btn_key_fenix'] = document.getElementById('edit_key_fenix').value;
+        misClaves['btn_key_pwd'] = document.getElementById('edit_key_pwd').value;
+        try {
+            await baseDatos.guardar('configuracion', { clave: 'claves_rapidas', datos: misClaves });
+            alert("✅ Claves actualizadas.");
+            if(modalClaves) modalClaves.classList.add('hidden');
+        } catch (e) { alert(e); }
+    });
+}
+
+/* =========================================
+   6. MÉTRICAS AHT (REALES)
+   ========================================= */
+async function actualizarMetricasDesdeDB() {
+    try {
+        const historial = await baseDatos.leerTodo('historial');
+        const hoyTexto = new Date().toLocaleDateString();
+        const ahora = new Date();
+        const mesActual = ahora.getMonth();
+        const anioActual = ahora.getFullYear();
+
+        let sumaDia = 0, countDia = 0;
+        let sumaMes = 0, countMes = 0;
+
+        historial.forEach(reg => {
+            const duracion = Number(reg.duracion) || 0;
+            const fechaReg = new Date(reg.id_unico);
+
+            if (fechaReg.getMonth() === mesActual && fechaReg.getFullYear() === anioActual) {
+                sumaMes += duracion;
+                countMes++;
+            }
+            if (reg.fecha === hoyTexto) {
+                sumaDia += duracion;
+                countDia++;
+            }
+        });
+
+        const ahtDia = countDia > 0 ? sumaDia / countDia : 0;
+        const ahtMes = countMes > 0 ? sumaMes / countMes : 0;
+
+        const divDiario = document.getElementById('aht_daily_display');
+        const divMensual = document.getElementById('aht_monthly_display');
+
+        if (divDiario) divDiario.textContent = formatearDual(ahtDia);
+        if (divMensual) divMensual.textContent = formatearDual(ahtMes);
+    } catch (error) { console.error(error); }
+}
+
+/* =========================================
+   7. GESTIÓN DEL TIMER
    ========================================= */
 function gestionarTimerRetoma(esReinicioManual = false) {
-    // 1. Limpiar timer anterior
+    if (timerPanel) timerPanel.classList.remove('hidden');
     if (timerRetoma) clearInterval(timerRetoma);
 
     retomaStartTime = Date.now();
-    
+    if (!horaInicioLlamada) horaInicioLlamada = Date.now();
+
     if (esReinicioManual) {
-        // Reinicio manual (Botón Modificar): Vamos directo al ciclo de 115s
-        primeraAlarmaSonada = true; 
-        proximaAlarmaSegundos = 115;
-        console.log("🔄 Reinicio manual: Alarma en 1:55 min");
+        primeraAlarmaSonada = true; proximaAlarmaSegundos = 115;
     } else {
-        // Inicio automático (Al escribir ID): Primero 45s
-        primeraAlarmaSonada = false;
-        proximaAlarmaSegundos = 45;
-        console.log("⏱️ Inicio automático: Alarma en 45s");
+        primeraAlarmaSonada = false; proximaAlarmaSegundos = 45;
     }
 
     timerRetoma = setInterval(() => {
-        const segundosTranscurridos = Math.floor((Date.now() - retomaStartTime) / 1000);
+        const ahora = Date.now();
+        const segundosCiclo = Math.floor((ahora - retomaStartTime) / 1000);
+        const segundosTotal = Math.floor((ahora - horaInicioLlamada) / 1000);
+        
+        if (displayTotal) displayTotal.textContent = formatoMMSS(segundosTotal);
 
-        if (segundosTranscurridos >= proximaAlarmaSegundos) {
-            sonarAlertaRetoma(); // ¡Sonido!
+        let falta = proximaAlarmaSegundos - segundosCiclo;
+        if (falta < 0) falta = 0; 
+        
+        if (displayCountdown) {
+            displayCountdown.textContent = formatoMMSS(falta);
+            if (falta <= 10) displayCountdown.classList.add('danger');
+            else displayCountdown.classList.remove('danger');
+        }
 
+        if (segundosCiclo >= proximaAlarmaSegundos) {
+            sonarAlertaRetoma(); 
             if (!primeraAlarmaSonada) {
-                // De 45s pasamos a 115s
-                primeraAlarmaSonada = true;
-                proximaAlarmaSegundos = segundosTranscurridos + 115;
+                primeraAlarmaSonada = true; proximaAlarmaSegundos = segundosCiclo + 115;
             } else {
-                // Sumamos 115s cíclicamente
                 proximaAlarmaSegundos += 115;
             }
         }
     }, 1000);
 }
 
+const btnRefres = document.getElementById('btn_key_refres');
+if (btnRefres) {
+    btnRefres.addEventListener('click', () => {
+        if (horaInicioLlamada !== null) {
+            gestionarTimerRetoma(true);
+            const original = btnRefres.textContent;
+            btnRefres.textContent = "⏱️";
+            btnRefres.style.backgroundColor = "#dcfce7"; 
+            setTimeout(() => { btnRefres.textContent = original; btnRefres.style.backgroundColor = ""; }, 800);
+        }
+    });
+}
+
+if (callIdInput) {
+    callIdInput.addEventListener('input', () => {
+        if (callIdInput.value.length > 0 && horaInicioLlamada === null) {
+            horaInicioLlamada = Date.now();
+            gestionarTimerRetoma(false); 
+        }
+    });
+}
+
 /* =========================================
-   5. INPUTS AVANZADOS (GHOST VALUE + AUTOCOMPLETE + NAV)
+   8. INPUTS INTELIGENTES
    ========================================= */
 function configurarInputAvanzado(inputElement, dataListId) {
     if (!inputElement) return;
-
-    // Buscamos la etiqueta (label) hermana para el efecto visual
     const label = inputElement.nextElementSibling;
 
-    // A. ENTRADA (FOCUS): Mover valor actual al label ("Ghost Value")
     inputElement.addEventListener('focus', function() {
-        this.dataset.oldValue = this.value; // Guardar valor real
-        
-        // Si hay un valor, lo subimos a la etiqueta para que no se pierda de vista
+        this.dataset.oldValue = this.value; 
         if (this.value && label) {
-            if (!label.dataset.originalText) {
-                label.dataset.originalText = label.innerText; 
-            }
+            if (!label.dataset.originalText) label.dataset.originalText = label.innerText; 
             label.innerText = this.value; 
             label.style.color = "#ef4444"; 
         }
-
-        this.value = ''; // Limpiamos el input para permitir búsqueda fresca
+        this.value = ''; 
     });
 
-    // B. SALIDA (BLUR): Restaurar si no se eligió nada
     inputElement.addEventListener('blur', function() {
-        if (this.value === '') {
-            this.value = this.dataset.oldValue || ''; // Restaurar valor anterior
-        }
-
-        // Devolver el label a su estado original
+        if (this.value === '') this.value = this.dataset.oldValue || ''; 
         if (label && label.dataset.originalText) {
             label.innerText = label.dataset.originalText;
             label.style.color = ""; 
         }
     });
 
-    // C. AUTOCOMPLETADO CON TABULADOR (CORREGIDO: SALTA AL SIGUIENTE)
     inputElement.addEventListener('keydown', function(e) {
         if (e.key === 'Tab') {
             const val = this.value.toLowerCase();
             const dataList = document.getElementById(dataListId);
-            
             if (val && dataList) {
                 const opciones = Array.from(dataList.options);
-                // Buscar coincidencia que empiece por lo escrito
                 const coincidencia = opciones.find(opt => opt.value.toLowerCase().startsWith(val));
-
                 if (coincidencia) {
-                    // 1. Evitar comportamiento por defecto
                     e.preventDefault(); 
-                    
-                    // 2. Rellenar valor
                     this.value = coincidencia.value;
-                    
-                    // 3. Disparar eventos de cambio
                     this.dispatchEvent(new Event('change'));
                     
-                    // 4. SOLUCIÓN: BUSCAR Y ENFOCAR EL SIGUIENTE CAMPO
                     const formElements = Array.from(document.querySelectorAll('input:not([type="hidden"]), textarea, button'));
                     const currentIndex = formElements.indexOf(this);
-                    
                     if (currentIndex > -1 && currentIndex < formElements.length - 1) {
                         formElements[currentIndex + 1].focus();
                     }
@@ -221,12 +386,10 @@ function configurarInputAvanzado(inputElement, dataListId) {
     });
 }
 
-// Configuración de los 3 campos principales
 configurarInputAvanzado(techInput, 'tech_options');
 configurarInputAvanzado(prodInput, 'prod_options');
 configurarInputAvanzado(failInput, 'fail_options');
 
-// Función auxiliar para actualizar Fallas (Cascada)
 function actualizarFallas(producto) {
     if (!opcionesNaturaleza[producto]) {
         if(failList) failList.innerHTML = '';
@@ -234,267 +397,170 @@ function actualizarFallas(producto) {
         return;
     }
     llenarDatalist(failList, opcionesNaturaleza[producto]);
-    // Pre-seleccionar el primero
     if(failInput) failInput.value = opcionesNaturaleza[producto][0];
 }
 
+if (techInput) techInput.addEventListener('change', (e) => {
+    const tec = e.target.value;
+    const servicios = opcionesTiposervicio[tec];
+    if (servicios && servicios.length > 0) {
+        llenarDatalist(prodList, servicios);
+        prodInput.value = servicios[0];
+        actualizarFallas(servicios[0]);
+    }
+});
+if (prodInput) prodInput.addEventListener('change', (e) => actualizarFallas(e.target.value));
+
 /* =========================================
-   6. MÉTRICAS Y CONTROL DE MES
+   9. LÓGICA B2B (MOSTRAR/OCULTAR)
    ========================================= */
-function actualizarMetricasUI() {
-    const hoy = new Date().toLocaleDateString();
-    
-    if (ahtDiario.fecha !== hoy) {
-        ahtDiario = { segundos: 0, llamadas: 0, fecha: hoy };
-        localStorage.setItem('aht_diario', JSON.stringify(ahtDiario));
-    }
-
-    const promDiarioSeg = ahtDiario.llamadas > 0 ? ahtDiario.segundos / ahtDiario.llamadas : 0;
-    const promMensualSeg = ahtMensual.llamadas > 0 ? ahtMensual.segundos / ahtMensual.llamadas : 0;
-
-    const divDiario = document.getElementById('aht_daily_display');
-    const divMensual = document.getElementById('aht_monthly_display');
-
-    if (divDiario) divDiario.textContent = formatearDual(promDiarioSeg);
-    if (divMensual) divMensual.textContent = formatearDual(promMensualSeg);
-}
-
-function verificarCambioMes() {
-    const mesActualReal = new Date().toISOString().slice(0, 7);
-    if (mesGuardado !== mesActualReal) {
-        alert(`📅 Nuevo Mes Detectado. Reiniciando métricas.`);
-        ahtMensual = { segundos: 0, llamadas: 0 };
-        historialLlamadas = [];
-        mesGuardado = mesActualReal;
-        
-        localStorage.setItem('mes_actual', mesGuardado);
-        localStorage.setItem('aht_mensual', JSON.stringify(ahtMensual));
-        localStorage.setItem('historial_llamadas', JSON.stringify(historialLlamadas));
-        actualizarMetricasUI();
-    }
+if (radiosB2B && radiosB2B.length > 0) {
+    radiosB2B.forEach(radio => {
+        radio.addEventListener('change', (e) => {
+            if (panelB2B) {
+                if (e.target.value === 'si') {
+                    panelB2B.classList.remove('hidden');
+                } else {
+                    panelB2B.classList.add('hidden');
+                }
+            }
+        });
+    });
 }
 
 /* =========================================
-   7. EVENTOS Y LÓGICA DE NEGOCIO
+   10. BOTONES DE ACCIÓN (COPIAR, GUARDAR, EXPORTAR)
    ========================================= */
 
-// --- CASCADA TECNOLOGÍA -> PRODUCTO ---
-if (techInput) {
-    techInput.addEventListener('change', (e) => {
-        const tec = e.target.value;
-        const servicios = opcionesTiposervicio[tec];
-        if (servicios && servicios.length > 0) {
-            llenarDatalist(prodList, servicios);
-            prodInput.value = servicios[0];
-            actualizarFallas(servicios[0]);
-        } else {
-            if(prodList) prodList.innerHTML = '';
-            if(prodInput) prodInput.value = '';
-        }
-    });
-}
-
-// --- CASCADA PRODUCTO -> FALLA ---
-if (prodInput) {
-    prodInput.addEventListener('change', (e) => actualizarFallas(e.target.value));
-}
-
-// --- INICIO AUTOMÁTICO TIMER (ID LLAMADA) ---
-if (callIdInput) {
-    callIdInput.addEventListener('input', () => {
-        if (callIdInput.value.length > 0 && horaInicioLlamada === null) {
-            horaInicioLlamada = Date.now();
-            // Inicia: 45s -> luego 115s
-            gestionarTimerRetoma(false); 
-        }
-    });
-}
-
-// --- BOTÓN "MODIFICAR" (REINICIO MANUAL) ---
-const btnModificar = document.getElementById('btn_key_mod');
-if (btnModificar) {
-    btnModificar.addEventListener('click', () => {
-        if (horaInicioLlamada !== null) {
-            gestionarTimerRetoma(true); // Reinicia ciclo a 115s
-            
-            // Efecto visual en el botón
-            const original = btnModificar.textContent;
-            btnModificar.textContent = "⏱️ Reiniciado";
-            btnModificar.style.backgroundColor = "#dcfce7"; 
-
-            if(obsTextarea) obsTextarea.focus()
-
-            setTimeout(() => {
-                btnModificar.textContent = original;
-                btnModificar.style.backgroundColor = ""; 
-            }, 1000);
-        }
-    });
-}
-
-// --- AUTO-ALTURA OBSERVACIONES ---
-if (obsTextarea) {
-    obsTextarea.addEventListener('input', function() {
-        this.style.height = 'auto'; 
-        this.style.height = (this.scrollHeight) + 'px'; 
-    });
-}
-
-// --- BOTÓN COPIAR ---
+// --- BOTÓN COPIAR (CORREGIDO CON IDs REALES DEL HTML) ---
 const btnCopy = document.getElementById('btn_copy');
 if (btnCopy) {
     btnCopy.addEventListener('click', () => {
-        const idValor = callIdInput.value.trim();
-        const obsValor = obsTextarea.value.trim();
+        const idValor = callIdInput ? callIdInput.value.trim() : '';
+        const obsValor = obsTextarea ? obsTextarea.value.trim() : '';
+        
+        if (!idValor || !obsValor) { alert("⚠️ Faltan datos."); return; }
 
-        if (!idValor || !obsValor) {
-            alert("⚠️ Faltan datos (ID u Observaciones).");
-            return;
-        }
-
-        const isB2B = document.querySelector('input[name="b2b_option"]:checked')?.value === 'si';
-        const validar = (lbl, v) => (v && v.trim() !== "") ? `${lbl}${v.trim()}, ` : "";
+        const addField = (label, value) => {
+            // Si quieres que aparezca incluso vacío, quita el if
+            if (value && value.trim() !== "") return `${label}: ${value.trim()}, `;
+            return "";
+        };
 
         let plantilla = `Observaciones: ${obsValor}, Id de la llamada: ${idValor}, `;
-        plantilla += validar("SMNET: ", document.getElementById('prueba_smnet').value);
-        plantilla += validar("Tecnología: ", techInput.value);
-        plantilla += validar("Tipo de servicio: ", prodInput.value);
-        plantilla += validar("Naturaleza: ", failInput.value);
-        plantilla += validar("Documento: ", document.getElementById('customer_doc').value);
+
+        // Campos básicos
+        plantilla += addField("SMNET", document.getElementById('prueba_smnet')?.value);
+        plantilla += addField("Tecnología", techInput?.value);
+        plantilla += addField("Tipo de servicio", prodInput?.value);
+        plantilla += addField("Naturaleza", failInput?.value);
+        plantilla += addField("Documento", document.getElementById('customer_doc')?.value);
         
-        if (isB2B) plantilla += " Horario B2B activo.";
+        // Lógica B2B
+        const isB2B = document.querySelector('input[name="b2b_option"]:checked')?.value === 'si';
+        
+        if (isB2B) {
+            plantilla += " Horario B2B activo, ";
+            // AQUÍ ESTÁ LA CORRECCIÓN DE LOS IDs:
+            plantilla += addField("Atiende", document.getElementById('b2b_contact')?.value);
+            plantilla += addField("Días", document.getElementById('b2b_days')?.value);
+            plantilla += addField("Horario", document.getElementById('b2b_schedule')?.value);
+        }
 
         plantilla = plantilla.trim().replace(/,$/, "");
+
         navigator.clipboard.writeText(plantilla).then(() => {
             const original = btnCopy.textContent;
             btnCopy.textContent = "¡Copiado!";
+            if(btnReset) btnReset.focus(); 
             setTimeout(() => btnCopy.textContent = original, 1000);
         });
-
-        
-
-        if(btnReset) btnReset.focus();
     });
 }
 
 // --- BOTÓN REINICIAR / GUARDAR ---
 const btnReset = document.getElementById('btn_reset');
 if (btnReset) {
-    btnReset.addEventListener('click', () => {
+    btnReset.addEventListener('click', async () => {
         const idValor = callIdInput.value.trim();
         const obsValor = obsTextarea.value.trim();
+        if (!idValor || !obsValor) { alert("⚠️ Faltan datos obligatorios."); return; }
 
-        if (!idValor || !obsValor) {
-            alert("⚠️ Faltan datos obligatorios.");
-            return;
-        }
-
-        // 1. Detener Timer
         if (timerRetoma) clearInterval(timerRetoma);
         timerRetoma = null;
 
-        // 2. Guardar y Métricas
         const fin = Date.now();
-        const duracion = (fin - (horaInicioLlamada || fin)) / 1000;
+        const duracionRaw = (fin - (horaInicioLlamada || fin)) / 1000;
         
         const registro = {
+            id_unico: Date.now(),
             fecha: new Date().toLocaleDateString(),
             hora: new Date().toLocaleTimeString(),
             id: idValor,
-            cliente: document.getElementById('customer_name').value,
+            cliente: document.getElementById('customer_name')?.value || '',
             tec: techInput.value,
             prod: prodInput.value,
             falla: failInput.value,
             obs: obsValor,
-            duracion: duracion.toFixed(2)
+            duracion: Number(duracionRaw.toFixed(2))
         };
 
-        historialLlamadas.push(registro);
-        localStorage.setItem('historial_llamadas', JSON.stringify(historialLlamadas));
+        try {
+            await baseDatos.guardar('historial', registro);
+            console.log("💾 Guardado OK");
+            await actualizarMetricasDesdeDB();
+        } catch (error) { alert("Error DB: " + error); }
         
-        ahtDiario.segundos += duracion; ahtDiario.llamadas++;
-        ahtMensual.segundos += duracion; ahtMensual.llamadas++;
-        localStorage.setItem('aht_diario', JSON.stringify(ahtDiario));
-        localStorage.setItem('aht_mensual', JSON.stringify(ahtMensual));
-
-        // 3. Reset UI
-        actualizarMetricasUI();
+        // LIMPIEZA
         horaInicioLlamada = null;
-        
         document.querySelectorAll('input:not([type="radio"])').forEach(i => i.value = '');
-        document.querySelectorAll('textarea').forEach(t => {
-            t.value = '';
-            t.style.height = 'auto';
+        document.querySelectorAll('textarea').forEach(t => { 
+            t.value = ''; t.style.height = 'auto'; 
         });
         
         if(prodList) prodList.innerHTML = '';
         if(failList) failList.innerHTML = '';
         
+        // Resetear B2B
         if(panelB2B) panelB2B.classList.add('hidden');
         const radioNo = document.querySelector('input[name="b2b_option"][value="no"]');
         if(radioNo) radioNo.checked = true;
 
-        // 4. FOCO AL ID (PARA LA SIGUIENTE LLAMADA - SOLUCIÓN)
         if (callIdInput) callIdInput.focus();
         
         if(timerPanel) {
-            timerPanel.classList.add('hidden')
+            timerPanel.classList.add('hidden');
+            if (displayTotal) displayTotal.textContent = "00:00";
+            if (displayCountdown) { displayCountdown.textContent = "00:00"; displayCountdown.classList.remove('danger'); }
         }
     });
 }
 
-// --- RADIOS B2B ---
-if (radiosB2B && radiosB2B.length > 0) {
-    radiosB2B.forEach(radio => {
-        radio.addEventListener('change', (e) => {
-            if (panelB2B) panelB2B.classList.toggle('hidden', e.target.value === 'no');
-        });
-    });
-}
-
-/* =========================================
-   8. EXPORTACIÓN, IMPORTACIÓN Y LIMPIEZA
-   ========================================= */
-
-// --- BOTÓN EXPORTAR (Excel y JSON) ---
+// --- EXPORTAR ---
 const btnExport = document.getElementById('btn_export');
 if (btnExport) {
-    btnExport.addEventListener('click', () => {
-        if (historialLlamadas.length === 0) {
-            alert("⚠️ No hay datos para exportar.");
-            return;
-        }
+    btnExport.addEventListener('click', async () => {
+        const historial = await baseDatos.leerTodo('historial');
+        if (historial.length === 0) { alert("⚠️ No hay datos."); return; }
 
         const fechaHoy = new Date().toLocaleDateString().replace(/\//g, '-');
-
-        // A. GENERAR CSV
-        let csv = "data:text/csv;charset=utf-8,Fecha,Hora,ID,Cliente,Tec,Prod,Falla,Duracion,Obs\n";
-        historialLlamadas.forEach(r => {
-            const obsClean = (r.obs || '').replace(/,/g, ';').replace(/\n/g, ' ');
-            csv += `${r.fecha},${r.hora},${r.id},"${r.cliente}",${r.tec},${r.prod},"${r.falla}","${obsClean}"\n`;
+        let csv = "Fecha,Hora,ID,Cliente,Tecnologia,Servicio,Falla,Duracion,Observaciones\n";
+        
+        historial.forEach(r => {
+            const obsClean = (r.obs || '').replace(/"/g, '""').replace(/(\r\n|\n|\r)/gm, " ");
+            const dur = r.duracion ? r.duracion.toString().replace('.', ',') : '0';
+            csv += `${r.fecha},${r.hora},${r.id},"${r.cliente}",${r.tec},${r.prod},"${r.falla}",${dur},"${obsClean}"\n`;
         });
         
-        const linkExcel = document.createElement("a");
-        linkExcel.href = encodeURI(csv);
-        linkExcel.download = `Reporte_${fechaHoy}.csv`;
-        linkExcel.click();
-
-        // B. GENERAR JSON (BACKUP)
-        const backupData = {
-            historial: historialLlamadas,
-            diario: ahtDiario,
-            mensual: ahtMensual
-        };
-        const blobJson = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
-        const linkJson = document.createElement("a");
-        linkJson.href = URL.createObjectURL(blobJson);
-        linkJson.download = `Backup_Data_${fechaHoy}.json`;
-        
-        setTimeout(() => linkJson.click(), 500);
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = `Gestion_Llamadas_${fechaHoy}.csv`;
+        link.click();
     });
 }
 
-// --- IMPORTAR DATOS (FUSIÓN INTELIGENTE) ---
+// --- IMPORTAR ---
 const btnImport = document.getElementById('btn_import_data');
 const fileSelector = document.getElementById('file_selector');
 
@@ -504,136 +570,60 @@ if (btnImport && fileSelector) {
     fileSelector.addEventListener('change', function(e) {
         const archivo = e.target.files[0];
         if (!archivo) return;
-
         const lector = new FileReader();
-        lector.onload = function(e) {
+        lector.onload = async function(e) {
+            const contenido = e.target.result;
+            let datosParaImportar = [];
             try {
-                const datosImportados = JSON.parse(e.target.result);
-                
-                if (confirm("¿Fusionar datos? (Se agregarán sin borrar lo actual)")) {
-                    // 1. Fusionar Historial
-                    const nuevos = datosImportados.historial || [];
-                    nuevos.forEach(nuevo => {
-                        const existe = historialLlamadas.some(reg => reg.id === nuevo.id && reg.fecha === nuevo.fecha);
-                        if (!existe) historialLlamadas.push(nuevo);
-                    });
-
-                    // 2. Fusionar Métricas
-                    ahtDiario.segundos += (datosImportados.diario?.segundos || 0);
-                    ahtDiario.llamadas += (datosImportados.diario?.llamadas || 0);
-                    ahtMensual.segundos += (datosImportados.mensual?.segundos || 0);
-                    ahtMensual.llamadas += (datosImportados.mensual?.llamadas || 0);
-
-                    // 3. Guardar
-                    localStorage.setItem('historial_llamadas', JSON.stringify(historialLlamadas));
-                    localStorage.setItem('aht_diario', JSON.stringify(ahtDiario));
-                    localStorage.setItem('aht_mensual', JSON.stringify(ahtMensual));
-                    
-                    alert("✅ Datos importados correctamente.");
-                    location.reload();
+                if (archivo.name.endsWith('.json')) {
+                    datosParaImportar = JSON.parse(contenido);
+                } else if (archivo.name.endsWith('.csv')) {
+                    const lineas = contenido.split('\n');
+                    for (let i = 1; i < lineas.length; i++) {
+                        const linea = lineas[i].trim();
+                        if (linea) {
+                            const partes = linea.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || [];
+                            const cols = partes.map(p => p.replace(/^"|"$/g, '').trim());
+                            if (cols.length >= 8) {
+                                datosParaImportar.push({
+                                    id_unico: Date.now() + i,
+                                    fecha: cols[0], hora: cols[1], id: cols[2], cliente: cols[3],
+                                    tec: cols[4], prod: cols[5], falla: cols[6],
+                                    duracion: parseFloat(cols[7].replace(',', '.')) || 0,
+                                    obs: cols[8] || ''
+                                });
+                            }
+                        }
+                    }
                 }
-            } catch (err) {
-                alert("❌ Archivo inválido.");
-            }
+                
+                if (datosParaImportar.length > 0 && confirm(`¿Importar ${datosParaImportar.length} registros?`)) {
+                    for (const registro of datosParaImportar) {
+                        const existe = (await baseDatos.leerTodo('historial')).find(r => r.id === registro.id && r.fecha === registro.fecha);
+                        if (!existe) {
+                            if(!registro.id_unico) registro.id_unico = Date.now() + Math.random();
+                            await baseDatos.guardar('historial', registro);
+                        }
+                    }
+                    alert("✅ Importación completada.");
+                    await actualizarMetricasDesdeDB();
+                }
+            } catch (err) { alert("❌ Error al importar."); }
         };
         lector.readAsText(archivo);
     });
 }
 
-// --- BORRAR TODO ---
-const btnClear = document.getElementById('btn_clear_data');
-if (btnClear) {
-    btnClear.addEventListener('click', () => {
-        if(confirm("⚠️ ¿Estás seguro? Se borrará TODO.")) {
-            localStorage.clear();
-            location.reload();
-        }
-    });
-}
-
 /* =========================================
-   3.5 FUNCIÓN AUXILIAR DE TIEMPO
+   11. INICIALIZACIÓN
    ========================================= */
-function formatoMMSS(segundos) {
-    const m = Math.floor(segundos / 60).toString().padStart(2, '0');
-    const s = Math.floor(segundos % 60).toString().padStart(2, '0');
-    return `${m}:${s}`;
-}
-
-/* =========================================
-   4. LÓGICA DEL TEMPORIZADOR (MOTOR CON UI)
-   ========================================= */
-function gestionarTimerRetoma(esReinicioManual = false) {
-    // 1. Mostrar el panel si estaba oculto
-    if (timerPanel) timerPanel.classList.remove('hidden');
-
-    // 2. Limpiar timer anterior
-    if (timerRetoma) clearInterval(timerRetoma);
-
-    retomaStartTime = Date.now();
-    
-    // Asegurarnos de tener hora de inicio global
-    if (!horaInicioLlamada) horaInicioLlamada = Date.now();
-
-    if (esReinicioManual) {
-        primeraAlarmaSonada = true; 
-        proximaAlarmaSegundos = 115;
-        console.log("🔄 Reinicio: Cuenta regresiva de 1:55 min");
-    } else {
-        primeraAlarmaSonada = false;
-        proximaAlarmaSegundos = 45;
-        console.log("⏱️ Inicio: Cuenta regresiva de 45s");
-    }
-
-    // 3. Iniciar el intervalo (Se ejecuta cada segundo)
-    timerRetoma = setInterval(() => {
-        const ahora = Date.now();
-        
-        // A. Calcular tiempo transcurrido en este ciclo de retoma
-        const segundosCiclo = Math.floor((ahora - retomaStartTime) / 1000);
-        
-        // B. Calcular Duración Total de la llamada
-        const segundosTotal = Math.floor((ahora - horaInicioLlamada) / 1000);
-        if (displayTotal) displayTotal.textContent = formatoMMSS(segundosTotal);
-
-        // C. Calcular Cuenta Regresiva (Lo que falta para la alarma)
-        let falta = proximaAlarmaSegundos - segundosCiclo;
-        
-        // Evitar números negativos visuales un momento antes del reset
-        if (falta < 0) falta = 0; 
-        
-        if (displayCountdown) {
-            displayCountdown.textContent = formatoMMSS(falta);
-            
-            // Efecto visual: Rojo si faltan menos de 10 segundos
-            if (falta <= 10) {
-                displayCountdown.classList.add('danger');
-            } else {
-                displayCountdown.classList.remove('danger');
-            }
-        }
-
-        // D. Lógica de la Alarma
-        if (segundosCiclo >= proximaAlarmaSegundos) {
-            sonarAlertaRetoma(); // ¡Sonido!
-
-            if (!primeraAlarmaSonada) {
-                // Pasamos de 45s a 115s
-                primeraAlarmaSonada = true;
-                proximaAlarmaSegundos = segundosCiclo + 115;
-            } else {
-                // Sumamos 115s al objetivo actual
-                proximaAlarmaSegundos += 115;
-            }
-        }
-    }, 1000);
-}
-
-
-// INICIO AUTOMÁTICO
-function init() {
+async function init() {
     llenarDatalist(techList, Object.keys(opcionesTiposervicio));
-    verificarCambioMes();
-    actualizarMetricasUI();
+    try {
+        await baseDatos.iniciar();
+        console.log("✅ DB Conectada");
+        await cargarClavesDesdeDB();
+        await actualizarMetricasDesdeDB(); 
+    } catch (error) { console.error(error); }
 }
 init();

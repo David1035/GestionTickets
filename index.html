@@ -124,6 +124,7 @@
             <button class="btn-key" id="btn_key_elite">Elite</button>
             <button class="btn-key" id="btn_key_fenix">Fenix</button>
             <button class="btn-key" id="btn_key_pwd">PWD</button>
+            <button class="btn-key refres" id="btn_key_refres">refres</button>
             <button class="btn-key mod" id="btn_key_mod">Modificar</button>
         </div>
     </div>
@@ -152,6 +153,30 @@
     <div class="timer-box">
         <span class="timer-label">🔔 Próximo Aviso</span>
         <span id="display_countdown" class="timer-value countdown">00:00</span>
+    </div>
+</div>
+
+<div id="modal_claves" class="modal-overlay hidden">
+    <div class="modal-content">
+        <h3>🔐 Configurar Claves Rápidas</h3>
+        
+        <div class="form-group-modal">
+            <label>Botón Elite:</label>
+            <input type="text" id="edit_key_elite">
+        </div>
+        <div class="form-group-modal">
+            <label>Botón Fenix:</label>
+            <input type="text" id="edit_key_fenix">
+        </div>
+        <div class="form-group-modal">
+            <label>Botón PWD:</label>
+            <input type="text" id="edit_key_pwd">
+        </div>
+
+        <div class="modal-actions">
+            <button id="btn_cancelar_modal" class="btn-cancel">Cancelar</button>
+            <button id="btn_guardar_modal" class="btn-save">Guardar Cambios</button>
+        </div>
     </div>
 </div>
 
