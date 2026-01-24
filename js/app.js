@@ -1,5 +1,5 @@
 /* ==========================================================================
-   ARCHIVO: js/app.js - CONTROLADOR FINAL (AHT ACTIVO)
+   ARCHIVO: js/app.js - CONTROLADOR FINAL (AHT + CRONÓMETRO + B2B)
    ========================================================================== */
 
 /* 1. DATOS */
@@ -39,21 +39,18 @@ const els = {
     horario: document.getElementById('horario_falla'),
     obs: document.getElementById('observaciones'),
     
-    // Paneles
     pNet: document.getElementById('panel_internet'),
     pTv: document.getElementById('panel_tv'),
     soporteVel: document.getElementById('soporte_velocidad'),
     tvQty: document.getElementById('tv_quantity'),
     tvCont: document.getElementById('tv_serials_container'),
     
-    // Checks & Toggles
     portal: document.getElementById('check_portal_cautivo'),
     toggleNotif: document.getElementById('btn_toggle_notif'),
     checkNotif: document.getElementById('check_notif_db'),
     toggleVenta: document.getElementById('btn_toggle_venta'),
     checkVenta: document.getElementById('check_venta_db'),
     
-    // Listas
     lTech: document.getElementById('tech_options'),
     lProd: document.getElementById('prod_options'),
     lFail: document.getElementById('fail_options'),
@@ -96,7 +93,6 @@ const els = {
     inRed: document.getElementById('edit_key_red'),
     inWts: document.getElementById('edit_key_wts'),
     
-    // Botones Keys
     kElite: document.getElementById('btn_key_elite'),
     kFenix: document.getElementById('btn_key_fenix'),
     kRed: document.getElementById('btn_key_red'),
@@ -169,14 +165,12 @@ els.tvQty.addEventListener('input', (e) => {
 els.b2bRadios.forEach(r => r.addEventListener('change', (e) => {
     if(e.target.value === 'si') els.b2bPanel.classList.add('visible'); else els.b2bPanel.classList.remove('visible');
 }));
-
 els.b2bDays.addEventListener('change', (e) => {
     const val = e.target.value.toLowerCase();
     els.pSat.classList.add('hidden'); els.pSun.classList.add('hidden');
-    if(val.includes('sábado')) els.pSat.classList.remove('hidden'); // Solo si menciona Sábado
-    if(val.includes('domingo')) { els.pSun.classList.remove('hidden'); els.pSat.classList.remove('hidden'); } // Domingo implica fin de semana completo usualmente
+    if(val.includes('sábado')) els.pSat.classList.remove('hidden'); 
+    if(val.includes('domingo')) { els.pSun.classList.remove('hidden'); els.pSat.classList.remove('hidden'); }
 });
-
 els.cSat.addEventListener('change', () => { if(els.cSat.checked) els.iSat.classList.remove('hidden'); else els.iSat.classList.add('hidden'); });
 els.cSun.addEventListener('change', () => { if(els.cSun.checked) els.iSun.classList.remove('hidden'); else els.iSun.classList.add('hidden'); });
 els.permisoRadios.forEach(r => r.addEventListener('change', (e) => {
@@ -204,20 +198,55 @@ function copiarClave(key) {
 els.kElite.addEventListener('click', () => copiarClave('elite')); els.kFenix.addEventListener('click', () => copiarClave('fenix'));
 els.kRed.addEventListener('click', () => copiarClave('red')); els.kWts.addEventListener('click', () => copiarClave('wts'));
 
-/* 8. TIMER */
+/* 8. TIMER (CRONÓMETRO RESTAURADO) */
 function startTimer(manual = false) {
-    els.timerPanel.classList.remove('hidden'); if(timerRetoma) clearInterval(timerRetoma);
-    retomaStartTime = Date.now(); if(!horaInicioLlamada) horaInicioLlamada = Date.now();
-    proximaAlarmaSegundos = manual ? 115 : 45;
+    // Mostrar Panel
+    if(els.timerPanel) els.timerPanel.classList.remove('hidden');
+    
+    if(timerRetoma) clearInterval(timerRetoma);
+    
+    retomaStartTime = Date.now();
+    if(!horaInicioLlamada || manual) horaInicioLlamada = Date.now(); // Si es manual, resetea total también
+    
+    proximaAlarmaSegundos = 115; // Tiempo para la primera alerta de retoma
+
     timerRetoma = setInterval(() => {
-        const now = Date.now(); const totalSec = Math.floor((now - horaInicioLlamada) / 1000); els.dispTotal.textContent = fmtTime(totalSec);
-        const cycleSec = Math.floor((now - retomaStartTime) / 1000); let left = proximaAlarmaSegundos - cycleSec; if(left < 0) left = 0;
-        els.dispCount.textContent = fmtTime(left); if(left <= 10) els.dispCount.classList.add('danger'); else els.dispCount.classList.remove('danger');
-        if(left === 0) { playAlert(); retomaStartTime = Date.now(); proximaAlarmaSegundos = 115; }
+        const now = Date.now();
+        
+        // 1. Tiempo Total
+        const totalSec = Math.floor((now - horaInicioLlamada) / 1000);
+        if(els.dispTotal) els.dispTotal.textContent = fmtTime(totalSec);
+        
+        // 2. Tiempo Cuenta Regresiva (Aviso)
+        const cycleSec = Math.floor((now - retomaStartTime) / 1000);
+        let left = proximaAlarmaSegundos - cycleSec;
+        if(left < 0) left = 0;
+        
+        if(els.dispCount) {
+            els.dispCount.textContent = fmtTime(left);
+            if(left <= 10) els.dispCount.classList.add('danger'); 
+            else els.dispCount.classList.remove('danger');
+        }
+
+        // Alerta Sonora
+        if(left === 0) { 
+            playAlert(); 
+            retomaStartTime = Date.now(); 
+            proximaAlarmaSegundos = 115; // Reinicia ciclo aviso
+        }
     }, 1000);
 }
-els.id.addEventListener('input', () => { if(els.id.value.trim().length > 0 && !timerRetoma) startTimer(false); });
-els.btnRefres.addEventListener('click', () => { if(horaInicioLlamada) startTimer(true); });
+
+// Trigger Input ID
+els.id.addEventListener('input', () => { 
+    if(els.id.value.trim().length > 0 && !timerRetoma) startTimer(false); 
+});
+
+// Trigger Botón Reloj (Refrescar)
+els.btnRefres.addEventListener('click', () => { 
+    startTimer(true); // True = Reinicia tiempos manual
+});
+
 let audioCtx;
 function playAlert() {
     if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -256,7 +285,7 @@ document.getElementById('btn_copy').addEventListener('click', () => {
     navigator.clipboard.writeText(txt).then(() => { const b = document.getElementById('btn_copy'); const prev = b.textContent; b.textContent = "¡Copiado!"; setTimeout(() => b.textContent = prev, 1000); });
 });
 
-/* 10. GUARDAR & AHT (CORREGIDO) */
+/* 10. GUARDAR & AHT */
 document.getElementById('btn_reset').addEventListener('click', async () => {
     if(!els.id.value || !els.obs.value) return alert("Falta ID o Obs");
     if(timerRetoma) clearInterval(timerRetoma);
@@ -267,15 +296,17 @@ document.getElementById('btn_reset').addEventListener('click', async () => {
         id: els.id.value, cliente: els.cliente.value, celular: els.cel.value, cedula: els.doc.value,
         tec: els.tech.value, prod: els.prod.value, falla: els.fail.value, obs: els.obs.value,
         notif_confirmada: els.checkNotif.checked, venta_ofrecida: els.checkVenta.checked,
+        // Guardamos explícitamente SMNET para poder editar después
+        smnet_integrada: els.smnetInt.value, smnet_unitaria: els.smnetUnit.value,
         tipo_servicio: tipoServicioActual || 'N/A', tv_data: tvInfo, duracion: horaInicioLlamada ? Number(((Date.now()-horaInicioLlamada)/1000).toFixed(2)) : 0
     };
     try { 
         await baseDatos.guardar('historial', reg); 
-        await actualizarMetricas(); // CALCULAR AHT DESPUÉS DE GUARDAR
+        await actualizarMetricas(); 
         console.log("Guardado"); 
     } catch(e) { alert("Error: "+e); }
     
-    // Reset Form
+    // Reset
     horaInicioLlamada = null;
     document.querySelectorAll('input:not([type="radio"]):not([type="checkbox"])').forEach(i => i.value = '');
     els.obs.value = ''; els.obs.style.height = 'auto'; els.tvCont.innerHTML = '';
@@ -285,14 +316,14 @@ document.getElementById('btn_reset').addEventListener('click', async () => {
     els.timerPanel.classList.add('hidden'); els.id.focus();
 });
 
-/* 11. CÁLCULO REAL AHT */
+/* 11. CÁLCULO AHT */
 async function actualizarMetricas() {
     try {
         if (!baseDatos.db) return;
         const historial = await baseDatos.leerTodo('historial');
         
         const now = new Date();
-        const hoyString = now.toLocaleDateString(); // "23/1/2026" dependiendo del locale
+        const hoyString = now.toLocaleDateString(); 
         const currentMonth = now.getMonth();
         const currentYear = now.getFullYear();
 
@@ -301,28 +332,18 @@ async function actualizarMetricas() {
 
         historial.forEach(r => {
             const dur = Number(r.duracion) || 0;
-            const rDate = new Date(r.id_unico); // Usamos el timestamp para el mes
+            const rDate = new Date(r.id_unico); 
             
-            // AHT Diario (comparación string fecha exacta)
-            if (r.fecha === hoyString) {
-                dailySum += dur;
-                dailyCount++;
-            }
-            // AHT Mensual
-            if (rDate.getMonth() === currentMonth && rDate.getFullYear() === currentYear) {
-                monthlySum += dur;
-                monthlyCount++;
-            }
+            if (r.fecha === hoyString) { dailySum += dur; dailyCount++; }
+            if (rDate.getMonth() === currentMonth && rDate.getFullYear() === currentYear) { monthlySum += dur; monthlyCount++; }
         });
 
         const dailyAvg = dailyCount > 0 ? dailySum / dailyCount : 0;
         const monthlyAvg = monthlyCount > 0 ? monthlySum / monthlyCount : 0;
-        
         const fmt = (s) => `${Math.round(s)}s / ${(s/60).toFixed(1)}m`;
         
         if(els.ahtDay) els.ahtDay.textContent = fmt(dailyAvg);
         if(els.ahtMonth) els.ahtMonth.textContent = fmt(monthlyAvg);
-
     } catch (e) { console.error("Error AHT:", e); }
 }
 
